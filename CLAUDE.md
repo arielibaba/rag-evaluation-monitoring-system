@@ -6,92 +6,117 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 REMS (RAG Evaluation & Monitoring System) is a Python module that evaluates and monitors the performance of an existing regulatory RAG chatbot. It operates as an external observer without modifying the chatbot itself.
 
+Key features:
+- RAGAS-based evaluation (Faithfulness, Context Precision, Answer Relevancy)
+- Hallucination detection (faithfulness < 0.7 threshold)
+- Diagnostic engine with root cause analysis
+- Recommendations exported to YAML for manual application
+- PDF/HTML reports with visualizations
+- Streamlit web dashboard
+
 ## Development Commands
 
 ```bash
 # Install dependencies
 uv sync
 
-# Install with dev dependencies
-uv sync --all-extras
-
-# Initialize database
+# Initialize database (PostgreSQL must be running)
 uv run rems init-db
 
-# Launch web interface (Streamlit dashboard)
-uv run rems web
-uv run rems web --port 8080  # Custom port
+# Launch web interface
+uv run rems web                    # Default port 8501
+uv run rems web --port 8080        # Custom port
 
 # Run evaluation from JSON file
-uv run rems evaluate --file interactions.json
+uv run rems evaluate --file test_interactions.json --name "My Evaluation"
 
 # Run evaluation from chatbot API
-uv run rems evaluate --start 2026-01-01 --limit 100
+uv run rems evaluate --start 2026-01-01 --end 2026-01-07 --limit 100
 
-# Run tests
-uv run pytest
+# Simulate evaluation (no LLM required, for testing)
+uv run python scripts/simulate_evaluation.py
 
-# Run linting
+# Linting and type checking
 uv run ruff check src/
-
-# Type checking
 uv run mypy src/
 ```
 
-## Weekly Scheduled Evaluation
-
-Use cron for weekly evaluations:
+## Database Setup
 
 ```bash
-# Edit crontab
-crontab -e
+# Start PostgreSQL (macOS)
+brew services start postgresql@16
 
-# Add this line (runs every Monday at 8:00 AM)
-0 8 * * 1 /path/to/project/scripts/weekly_evaluation.sh
+# Create database
+createdb rems
+
+# Initialize tables
+uv run rems init-db
 ```
 
 ## Architecture
 
 ```
 src/rems/
-├── cli.py                 # CLI entry point (init-db, evaluate, web)
+├── cli.py                 # CLI (init-db, collect, evaluate, web)
 ├── config.py              # Pydantic settings (env vars)
-├── schemas.py             # Pydantic data transfer objects
-├── models/                # SQLAlchemy models + database session
-├── collector/             # API Collector (fetches interactions from chatbot)
-├── evaluators/            # RAGAS-based evaluators
-│   ├── retrieval_evaluator.py   # Context precision/relevancy
-│   ├── generator_evaluator.py   # Faithfulness, hallucination detection
-│   └── orchestrator.py          # Coordinates all evaluators
-├── diagnostic/            # Root cause analysis engine
-├── recommendations/       # Generates suggestions + YAML export
-├── reports/               # PDF/HTML report generation
-│   └── templates/         # Jinja2 HTML templates
-└── web/                   # Streamlit web interface
-    ├── app.py             # Main Streamlit app
-    └── pages/             # Dashboard, History, Evaluate pages
+├── schemas.py             # Pydantic DTOs
+├── models/
+│   ├── database.py        # SQLAlchemy models (Interaction, Evaluation, etc.)
+│   └── session.py         # Database session management
+├── collector/
+│   └── api_collector.py   # Fetches interactions from API or JSON file
+├── evaluators/
+│   ├── retrieval_evaluator.py   # Context Precision (RAGAS 0.4.x)
+│   ├── generator_evaluator.py   # Faithfulness, Answer Relevancy
+│   └── orchestrator.py          # Coordinates evaluators
+├── diagnostic/
+│   └── engine.py          # Root cause analysis rules
+├── recommendations/
+│   └── engine.py          # Generates suggestions + YAML export
+├── reports/
+│   ├── generator.py       # PDF/HTML via WeasyPrint
+│   └── templates/         # Jinja2 templates
+└── web/
+    ├── app.py             # Streamlit main app
+    └── pages/             # dashboard.py, history.py, evaluate.py
 ```
 
-## Key Dependencies
+## Key Files
 
-- **RAGAS** - RAG evaluation metrics (faithfulness, context precision/recall, answer relevancy)
-- **LangChain + Gemini** - LLM-as-judge for evaluation
-- **SQLAlchemy** - Database ORM (PostgreSQL)
-- **WeasyPrint** - PDF generation from HTML
-- **Streamlit + Plotly** - Web dashboard interface
-- **Giskard** (optional) - Test dataset generation
+- `test_interactions.json` - Sample interactions for testing
+- `scripts/simulate_evaluation.py` - Creates fake evaluation data (no LLM needed)
+- `scripts/weekly_evaluation.sh` - Cron script for scheduled evaluations
+- `recommendations.yaml` - Output file with actionable recommendations
+- `reports/` - Generated PDF/HTML reports
 
-## Configuration
+## RAGAS 0.4.x Notes
 
-Copy `.env.example` to `.env` and configure:
-- `REMS_DATABASE_URL` - PostgreSQL connection string
-- `REMS_CHATBOT_API_URL` - URL of the chatbot API to evaluate
-- `REMS_GOOGLE_API_KEY` - Google API key for Gemini evaluation model
+Uses new class-based metric imports:
+```python
+from ragas.metrics._context_precision import ContextPrecision
+from ragas.metrics._faithfulness import Faithfulness
+from ragas.metrics._answer_relevance import ResponseRelevancy
+```
+
+Dataset columns: `user_input`, `response`, `retrieved_contexts` (not `question`, `answer`, `contexts`)
+
+## Environment Variables
+
+```env
+REMS_DATABASE_URL=postgresql://user:password@localhost:5432/rems
+REMS_CHATBOT_API_URL=http://localhost:8000
+REMS_CHATBOT_API_KEY=your-api-key
+REMS_GOOGLE_API_KEY=your-google-api-key
+REMS_EVALUATION_MODEL=gemini-2.0-flash
+REMS_REPORTS_DIR=./reports
+REMS_RECOMMENDATIONS_FILE=./recommendations.yaml
+```
 
 ## Domain Context
 
-This system evaluates a regulatory/legal domain chatbot where:
+Regulatory/legal chatbot evaluation where:
 - Accuracy is critical (legal consequences for errors)
 - All responses must be traceable to source documents
-- Hallucinations must be detected and flagged (faithfulness < 0.7)
-- Recommendations are output to YAML for manual application
+- Hallucinations flagged when faithfulness < 0.7
+- Quality levels: Excellent (≥90%), Good (75-89%), Acceptable (60-74%), Poor (40-59%), Critical (<40%)
