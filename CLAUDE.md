@@ -9,41 +9,72 @@ REMS (RAG Evaluation & Monitoring System) is a Python module that evaluates and 
 ## Development Commands
 
 ```bash
-# Create/activate virtual environment
-uv venv && source .venv/bin/activate
-
 # Install dependencies
 uv sync
 
-# Run the application
-uv run python main.py
+# Install with dev dependencies
+uv sync --all-extras
+
+# Run CLI
+uv run rems --help
+
+# Initialize database
+uv run rems init-db
+
+# Run evaluation from JSON file
+uv run rems evaluate --file interactions.json
+
+# Run evaluation from chatbot API
+uv run rems evaluate --start 2026-01-01 --limit 100
+
+# Run tests
+uv run pytest
+
+# Run linting
+uv run ruff check src/
+
+# Type checking
+uv run mypy src/
 ```
 
 ## Architecture
 
-REMS is structured as a layered system with the following core modules (to be implemented):
+```
+src/rems/
+├── cli.py                 # Command-line interface entry point
+├── config.py              # Pydantic settings (env vars)
+├── schemas.py             # Pydantic data transfer objects
+├── models/                # SQLAlchemy models + database session
+├── collector/             # API Collector (fetches interactions from chatbot)
+├── evaluators/            # RAGAS-based evaluators
+│   ├── retrieval_evaluator.py   # Context precision/relevancy
+│   ├── generator_evaluator.py   # Faithfulness, hallucination detection
+│   └── orchestrator.py          # Coordinates all evaluators
+├── diagnostic/            # Root cause analysis engine
+├── recommendations/       # Generates improvement suggestions + YAML export
+└── reports/               # PDF/HTML report generation
+    └── templates/         # Jinja2 HTML templates
+```
 
-1. **Data Collector** - Collects interactions from the chatbot via webhook, API polling, log reading, or database connection
-2. **Evaluators** - Component-specific evaluators:
-   - Retrieval Evaluator (context relevancy, precision, recall)
-   - Query Reformulator Evaluator (intent preservation, semantic similarity)
-   - Generator Evaluator (faithfulness, hallucination detection, answer relevancy)
-   - Memory/History Evaluator (context coherence, contradiction detection)
-   - End-to-End Evaluator (orchestration and global scoring)
-3. **Root Cause Analyzer** - Diagnoses causes of quality issues
-4. **Remediation Engine** - Generates recommendations and automated fixes
-5. **Reporting** - Generates PDF/HTML reports and Grafana dashboards
-6. **Alerting** - Real-time alerts based on configurable thresholds
+## Key Dependencies
 
-## Key Dependencies (Planned)
+- **RAGAS** - RAG evaluation metrics (faithfulness, context precision/recall, answer relevancy)
+- **LangChain + Gemini** - LLM-as-judge for evaluation
+- **SQLAlchemy** - Database ORM (PostgreSQL)
+- **WeasyPrint** - PDF generation from HTML
+- **Giskard** (optional) - Test dataset generation
 
-- **RAGAS** - For standardized RAG metrics (faithfulness, context precision/recall, answer relevancy)
-- **Giskard** - For hallucination detection, vulnerability scanning, LLM-as-judge evaluations
+## Configuration
+
+Copy `.env.example` to `.env` and configure:
+- `REMS_DATABASE_URL` - PostgreSQL connection string
+- `REMS_CHATBOT_API_URL` - URL of the chatbot API to evaluate
+- `REMS_GOOGLE_API_KEY` - Google API key for Gemini evaluation model
 
 ## Domain Context
 
 This system evaluates a regulatory/legal domain chatbot where:
 - Accuracy is critical (legal consequences for errors)
 - All responses must be traceable to source documents
-- Hallucinations must be detected and flagged
-- Outdated information must be identified
+- Hallucinations must be detected and flagged (faithfulness < 0.7)
+- Recommendations are output to YAML for manual application
