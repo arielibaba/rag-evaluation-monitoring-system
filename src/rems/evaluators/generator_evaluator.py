@@ -3,7 +3,8 @@
 import structlog
 from datasets import Dataset
 from ragas import evaluate
-from ragas.metrics import answer_relevancy, faithfulness
+from ragas.metrics._answer_relevance import ResponseRelevancy
+from ragas.metrics._faithfulness import Faithfulness
 
 from rems.evaluators.base import BaseEvaluator
 from rems.schemas import EvaluationResultSchema, InteractionSchema
@@ -67,11 +68,11 @@ class GeneratorEvaluator(BaseEvaluator):
             logger.warning("No interactions with retrieved documents to evaluate")
             return {}
 
-        # Prepare data for RAGAS
+        # Prepare data for RAGAS (new column names for v0.4.x)
         data = {
-            "question": [],
-            "answer": [],
-            "contexts": [],
+            "user_input": [],
+            "response": [],
+            "retrieved_contexts": [],
         }
 
         interaction_ids = []
@@ -79,9 +80,9 @@ class GeneratorEvaluator(BaseEvaluator):
             interaction_id = self._get_interaction_id(interaction, idx)
             interaction_ids.append(interaction_id)
 
-            data["question"].append(interaction.query)
-            data["answer"].append(interaction.response)
-            data["contexts"].append(
+            data["user_input"].append(interaction.query)
+            data["response"].append(interaction.response)
+            data["retrieved_contexts"].append(
                 [doc.content for doc in interaction.retrieved_documents]
             )
 
@@ -92,15 +93,17 @@ class GeneratorEvaluator(BaseEvaluator):
             interaction_count=len(interaction_ids),
         )
 
-        # Run RAGAS evaluation
-        metrics = [faithfulness, answer_relevancy]
-        eval_kwargs = {}
+        # Run RAGAS evaluation with new metric classes
+        faithfulness_metric = Faithfulness()
+        relevancy_metric = ResponseRelevancy()
+
+        eval_kwargs = {"metrics": [faithfulness_metric, relevancy_metric]}
         if self.llm:
             eval_kwargs["llm"] = self.llm
         if self.embeddings:
             eval_kwargs["embeddings"] = self.embeddings
 
-        result = evaluate(dataset, metrics=metrics, **eval_kwargs)
+        result = evaluate(dataset, **eval_kwargs)
 
         # Map results back to interactions
         results_dict: dict[str, EvaluationResultSchema] = {}

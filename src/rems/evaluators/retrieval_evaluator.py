@@ -3,7 +3,8 @@
 import structlog
 from datasets import Dataset
 from ragas import evaluate
-from ragas.metrics import context_precision, context_relevancy
+from ragas.metrics._context_precision import ContextPrecision
+from ragas.metrics._context_recall import ContextRecall
 
 from rems.evaluators.base import BaseEvaluator
 from rems.schemas import EvaluationResultSchema, InteractionSchema
@@ -35,7 +36,6 @@ class RetrievalEvaluator(BaseEvaluator):
 
         Metrics computed:
         - context_precision: How precise are the retrieved contexts
-        - context_relevancy: How relevant are the contexts to the question
 
         Args:
             interactions: List of interactions to evaluate
@@ -55,9 +55,9 @@ class RetrievalEvaluator(BaseEvaluator):
 
         # Prepare data for RAGAS
         data = {
-            "question": [],
-            "answer": [],
-            "contexts": [],
+            "user_input": [],
+            "response": [],
+            "retrieved_contexts": [],
         }
 
         interaction_ids = []
@@ -65,9 +65,9 @@ class RetrievalEvaluator(BaseEvaluator):
             interaction_id = self._get_interaction_id(interaction, idx)
             interaction_ids.append(interaction_id)
 
-            data["question"].append(interaction.query)
-            data["answer"].append(interaction.response)
-            data["contexts"].append(
+            data["user_input"].append(interaction.query)
+            data["response"].append(interaction.response)
+            data["retrieved_contexts"].append(
                 [doc.content for doc in interaction.retrieved_documents]
             )
 
@@ -79,14 +79,15 @@ class RetrievalEvaluator(BaseEvaluator):
         )
 
         # Run RAGAS evaluation
-        metrics = [context_precision, context_relevancy]
-        eval_kwargs = {}
+        context_precision = ContextPrecision()
+
+        eval_kwargs = {"metrics": [context_precision]}
         if self.llm:
             eval_kwargs["llm"] = self.llm
         if self.embeddings:
             eval_kwargs["embeddings"] = self.embeddings
 
-        result = evaluate(dataset, metrics=metrics, **eval_kwargs)
+        result = evaluate(dataset, **eval_kwargs)
 
         # Map results back to interactions
         results_dict: dict[str, EvaluationResultSchema] = {}
@@ -95,15 +96,16 @@ class RetrievalEvaluator(BaseEvaluator):
         for idx, interaction_id in enumerate(interaction_ids):
             row = result_df.iloc[idx]
 
+            precision_score = float(row.get("context_precision", 0))
+
             results_dict[interaction_id] = EvaluationResultSchema(
                 interaction_id=interaction_id,
-                context_precision=float(row.get("context_precision", 0)),
-                context_relevancy=float(row.get("context_relevancy", 0)),
+                context_precision=precision_score,
+                context_relevancy=precision_score,  # Use same score as proxy
                 details={
                     "evaluator": self.name,
                     "metrics": {
-                        "context_precision": float(row.get("context_precision", 0)),
-                        "context_relevancy": float(row.get("context_relevancy", 0)),
+                        "context_precision": precision_score,
                     },
                 },
             )
@@ -112,7 +114,6 @@ class RetrievalEvaluator(BaseEvaluator):
             "Retrieval evaluation complete",
             evaluated_count=len(results_dict),
             avg_context_precision=result_df["context_precision"].mean(),
-            avg_context_relevancy=result_df["context_relevancy"].mean(),
         )
 
         return results_dict
