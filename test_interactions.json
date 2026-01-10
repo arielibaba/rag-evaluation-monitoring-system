@@ -1,0 +1,42 @@
+{
+  "interactions": [
+    {
+      "query": "Quelle est la procédure de déclaration fiscale pour les entreprises ?",
+      "response": "Selon l'article 12 du Code Général des Impôts, les entreprises doivent effectuer leur déclaration fiscale dans un délai de 3 mois suivant la clôture de l'exercice. La déclaration doit être transmise par voie électronique via le portail impots.gouv.fr.",
+      "retrieved_documents": [
+        {
+          "content": "Article 12 - Délais de déclaration. Les entreprises soumises à l'impôt sur les sociétés doivent déposer leur déclaration de résultats dans les trois mois de la clôture de l'exercice.",
+          "source": "code_general_impots.pdf"
+        },
+        {
+          "content": "Article 13 - Modalités de transmission. Depuis le 1er janvier 2020, toutes les déclarations fiscales des entreprises doivent être transmises par voie électronique.",
+          "source": "code_general_impots.pdf"
+        }
+      ]
+    },
+    {
+      "query": "Quelles sont les sanctions en cas de retard de déclaration ?",
+      "response": "En cas de retard de déclaration, une majoration de 10% est appliquée sur le montant des droits dus. Cette majoration peut être portée à 40% en cas de défaut de déclaration après mise en demeure, conformément à l'article 1728 du CGI.",
+      "retrieved_documents": [
+        {
+          "content": "Article 1728 - Sanctions pour défaut ou retard de déclaration. Le défaut de production dans les délais prescrits d'une déclaration entraîne l'application d'une majoration de 10% des droits mis à la charge du contribuable.",
+          "source": "code_general_impots.pdf"
+        }
+      ]
+    },
+    {
+      "query": "Comment calculer la TVA récupérable ?",
+      "response": "La TVA récupérable correspond à la TVA payée sur les achats professionnels. Elle se calcule en appliquant le taux de TVA au montant HT des achats. Pour être récupérable, la TVA doit figurer sur une facture conforme et correspondre à des dépenses engagées pour les besoins de l'activité.",
+      "retrieved_documents": [
+        {
+          "content": "Article 271 - Droit à déduction. La taxe sur la valeur ajoutée qui a grevé les éléments du prix d'une opération imposable est déductible de la taxe applicable à cette opération.",
+          "source": "code_general_impots.pdf"
+        },
+        {
+          "content": "Article 289 - Conditions de forme des factures. Toute facture doit mentionner le taux de TVA applicable et le montant de la taxe correspondante.",
+          "source": "code_general_impots.pdf"
+        }
+      ]
+    }
+  ]
+}
