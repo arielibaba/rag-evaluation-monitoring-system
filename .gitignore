@@ -18,9 +18,9 @@ wheels/
 *.swp
 *.swo
 
-# Reports output
-reports/
-recommendations.yaml
+# Reports output (root level only, not src/rems/reports/)
+/reports/
+/recommendations.yaml
 
 # Database
 *.db
