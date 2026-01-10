@@ -28,6 +28,7 @@ wheels/
 
 # Logs
 *.log
+logs/
 
 # Coverage
 .coverage

@@ -15,11 +15,12 @@ uv sync
 # Install with dev dependencies
 uv sync --all-extras
 
-# Run CLI
-uv run rems --help
-
 # Initialize database
 uv run rems init-db
+
+# Launch web interface (Streamlit dashboard)
+uv run rems web
+uv run rems web --port 8080  # Custom port
 
 # Run evaluation from JSON file
 uv run rems evaluate --file interactions.json
@@ -37,11 +38,23 @@ uv run ruff check src/
 uv run mypy src/
 ```
 
+## Weekly Scheduled Evaluation
+
+Use cron for weekly evaluations:
+
+```bash
+# Edit crontab
+crontab -e
+
+# Add this line (runs every Monday at 8:00 AM)
+0 8 * * 1 /path/to/project/scripts/weekly_evaluation.sh
+```
+
 ## Architecture
 
 ```
 src/rems/
-├── cli.py                 # Command-line interface entry point
+├── cli.py                 # CLI entry point (init-db, evaluate, web)
 ├── config.py              # Pydantic settings (env vars)
 ├── schemas.py             # Pydantic data transfer objects
 ├── models/                # SQLAlchemy models + database session
@@ -51,9 +64,12 @@ src/rems/
 │   ├── generator_evaluator.py   # Faithfulness, hallucination detection
 │   └── orchestrator.py          # Coordinates all evaluators
 ├── diagnostic/            # Root cause analysis engine
-├── recommendations/       # Generates improvement suggestions + YAML export
-└── reports/               # PDF/HTML report generation
-    └── templates/         # Jinja2 HTML templates
+├── recommendations/       # Generates suggestions + YAML export
+├── reports/               # PDF/HTML report generation
+│   └── templates/         # Jinja2 HTML templates
+└── web/                   # Streamlit web interface
+    ├── app.py             # Main Streamlit app
+    └── pages/             # Dashboard, History, Evaluate pages
 ```
 
 ## Key Dependencies
@@ -62,6 +78,7 @@ src/rems/
 - **LangChain + Gemini** - LLM-as-judge for evaluation
 - **SQLAlchemy** - Database ORM (PostgreSQL)
 - **WeasyPrint** - PDF generation from HTML
+- **Streamlit + Plotly** - Web dashboard interface
 - **Giskard** (optional) - Test dataset generation
 
 ## Configuration

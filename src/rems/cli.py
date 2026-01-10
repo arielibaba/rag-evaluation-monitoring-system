@@ -168,6 +168,29 @@ def cmd_evaluate(args):
         collector.close()
 
 
+def cmd_web(args):
+    """Launch the web interface."""
+    import subprocess
+
+    logger.info("Launching web interface...", host=args.host, port=args.port)
+
+    # Get the path to the web app
+    from rems.web import app
+    import os
+
+    app_path = os.path.dirname(app.__file__)
+    app_file = os.path.join(app_path, "app.py")
+
+    # Launch streamlit
+    subprocess.run([
+        sys.executable, "-m", "streamlit", "run",
+        app_file,
+        "--server.port", str(args.port),
+        "--server.address", args.host,
+        "--browser.gatherUsageStats", "false",
+    ])
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -240,6 +263,18 @@ def main():
         "--no-report", action="store_true", help="Don't generate reports"
     )
     eval_parser.set_defaults(func=cmd_evaluate)
+
+    # web command
+    web_parser = subparsers.add_parser(
+        "web", help="Launch the web interface (Streamlit dashboard)"
+    )
+    web_parser.add_argument(
+        "--port", "-p", type=int, default=8501, help="Port for the web server"
+    )
+    web_parser.add_argument(
+        "--host", default="localhost", help="Host for the web server"
+    )
+    web_parser.set_defaults(func=cmd_web)
 
     args = parser.parse_args()
 
