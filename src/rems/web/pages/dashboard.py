@@ -131,7 +131,7 @@ def render_score_overview(evaluation: Evaluation):
         ))
 
         fig.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 
 def render_component_scores(evaluation: Evaluation):
@@ -222,7 +222,7 @@ def render_detailed_metrics(evaluation: Evaluation):
             labels={"x": "Level", "y": "Number of interactions"},
         )
         fig.update_layout(showlegend=False, height=250)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 
 def render_recommendations_summary(evaluation: Evaluation):

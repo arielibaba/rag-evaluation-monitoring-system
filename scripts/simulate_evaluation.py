@@ -2,7 +2,7 @@
 """Simulate an evaluation with fake data for testing purposes."""
 
 import random
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from rems.models import (
     Evaluation,
@@ -24,39 +24,83 @@ def simulate_evaluation():
         # Create sample interactions
         interactions_data = [
             {
-                "query": "Quelle est la procédure de déclaration fiscale pour les entreprises ?",
-                "response": "Selon l'article 12 du Code Général des Impôts, les entreprises doivent effectuer leur déclaration fiscale dans un délai de 3 mois suivant la clôture de l'exercice.",
+                "query": "What is the return policy for electronics?",
+                "response": (
+                    "According to our store policy, electronics can be returned "
+                    "within 30 days of purchase with the original receipt. "
+                    "The item must be in its original packaging and in working condition."
+                ),
                 "docs": [
-                    ("Article 12 - Délais de déclaration fiscale...", "code_impots.pdf"),
-                    ("Article 13 - Modalités de transmission...", "code_impots.pdf"),
+                    (
+                        "Section 3.1 - Return Policy. Electronics may be returned "
+                        "within 30 days...",
+                        "store_policies.pdf",
+                    ),
+                    (
+                        "Section 3.2 - Refund Processing. All refunds processed "
+                        "within 5-7 days...",
+                        "store_policies.pdf",
+                    ),
                 ],
             },
             {
-                "query": "Quelles sont les sanctions en cas de retard de déclaration ?",
-                "response": "Une majoration de 10% est appliquée sur le montant des droits dus en cas de retard.",
+                "query": "How do I track my order?",
+                "response": (
+                    "You can track your order by logging into your account and "
+                    "navigating to 'Order History'. Click on the specific order "
+                    "to view tracking information."
+                ),
                 "docs": [
-                    ("Article 1728 - Sanctions pour défaut de déclaration...", "code_impots.pdf"),
+                    (
+                        "Order Tracking Guide. Customers can track orders through "
+                        "their account dashboard...",
+                        "customer_support.pdf",
+                    ),
                 ],
             },
             {
-                "query": "Comment calculer la TVA récupérable ?",
-                "response": "La TVA récupérable correspond à la TVA payée sur les achats professionnels.",
+                "query": "What payment methods do you accept?",
+                "response": (
+                    "We accept all major credit cards including Visa, MasterCard, "
+                    "American Express, PayPal, and Apple Pay. "
+                    "For orders over $500, financing options are available."
+                ),
                 "docs": [
-                    ("Article 271 - Droit à déduction de TVA...", "code_impots.pdf"),
+                    (
+                        "Payment Methods. Accepted: Visa, MasterCard, "
+                        "American Express, PayPal, Apple Pay...",
+                        "checkout_faq.pdf",
+                    ),
                 ],
             },
             {
-                "query": "Quel est le taux d'imposition sur les sociétés ?",
-                "response": "Le taux normal de l'impôt sur les sociétés est de 25% depuis 2022.",
+                "query": "What is your shipping policy?",
+                "response": (
+                    "Standard shipping takes 5-7 business days. "
+                    "Express shipping (2-3 days) is available for an additional fee. "
+                    "Free shipping on orders over $75."
+                ),
                 "docs": [
-                    ("Article 219 - Taux de l'impôt sur les sociétés...", "code_impots.pdf"),
+                    (
+                        "Shipping Information. Standard: 5-7 days. "
+                        "Express: 2-3 days. Free over $75...",
+                        "shipping_policy.pdf",
+                    ),
                 ],
             },
             {
-                "query": "Quand doit-on payer la CFE ?",
-                "response": "La CFE doit être payée au plus tard le 15 décembre de chaque année.",
+                "query": "How do I contact customer support?",
+                "response": (
+                    "You can reach our customer support team via email at "
+                    "support@example.com, by phone at 1-800-EXAMPLE, "
+                    "or through our live chat feature on the website."
+                ),
                 "docs": [
-                    ("Article 1679 - Exigibilité de la CFE...", "code_impots.pdf"),
+                    (
+                        "Contact Us. Email: support@example.com. "
+                        "Phone: 1-800-EXAMPLE. Live chat available...",
+                        "contact_info.pdf",
+                    ),
                 ],
             },
         ]
@@ -103,7 +147,9 @@ def simulate_evaluation():
         hallucination_rate = hallucination_count / len(interactions)
 
         # Score distribution
-        all_scores = [(f * 0.6 + r * 0.4) for f, r in zip(faithfulness_scores, relevancy_scores)]
+        all_scores = [
+            (f * 0.6 + r * 0.4) for f, r in zip(faithfulness_scores, relevancy_scores)
+        ]
         distribution = {
             "excellent": len([s for s in all_scores if s >= 0.90]),
             "good": len([s for s in all_scores if 0.75 <= s < 0.90]),
@@ -113,22 +159,22 @@ def simulate_evaluation():
         }
 
         evaluation = Evaluation(
-            name="Évaluation de test (simulée)",
-            description="Évaluation avec données simulées pour tester l'interface",
+            name="Test Evaluation (Simulated)",
+            description="Evaluation with simulated data for testing the interface",
             interaction_count=len(interactions),
             overall_score=overall_score,
             retrieval_score=retrieval_score,
             generation_score=generation_score,
             metrics={
                 "avg_context_precision": avg_precision,
-                "avg_context_relevancy": avg_precision,  # Same as precision for simulation
+                "avg_context_relevancy": avg_precision,
                 "avg_faithfulness": avg_faithfulness,
                 "avg_answer_relevancy": avg_relevancy,
                 "hallucination_rate": hallucination_rate,
                 "total_hallucinations": hallucination_count,
                 "score_distribution": distribution,
             },
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
         session.add(evaluation)
         session.flush()
@@ -154,21 +200,44 @@ def simulate_evaluation():
             Recommendation(
                 evaluation_id=evaluation.id,
                 component="generator",
-                issue="faithfulness trop faible sur certaines réponses: 45.0% (seuil: 70.0%)\n\nCauses probables:\n  - Température du LLM trop élevée\n  - Contexte insuffisant fourni au LLM",
-                suggestion="Réduire la température du LLM et renforcer les instructions de citation des sources dans le prompt système",
+                issue=(
+                    "Faithfulness too low on some responses: 45.0% (threshold: 70.0%)"
+                    "\n\nProbable causes:"
+                    "\n  - LLM temperature too high"
+                    "\n  - Insufficient context provided to LLM"
+                ),
+                suggestion=(
+                    "Reduce LLM temperature and strengthen source citation "
+                    "instructions in the system prompt"
+                ),
                 priority="high",
                 parameter_adjustments={
-                    "generator.temperature": {"action": "decrease", "suggested_value": 0.3},
+                    "generator.temperature": {
+                        "action": "decrease",
+                        "suggested_value": 0.3,
+                    },
                 },
             ),
             Recommendation(
                 evaluation_id=evaluation.id,
                 component="retriever",
-                issue=f"context_precision moyenne: {avg_precision:.1%} (seuil recommandé: 80%)\n\nCauses probables:\n  - Top-K potentiellement trop élevé\n  - Seuil de similarité à ajuster",
-                suggestion="Augmenter le seuil de similarité pour filtrer les documents moins pertinents",
+                issue=(
+                    f"Average context precision: {avg_precision:.1%} "
+                    "(recommended threshold: 80%)"
+                    "\n\nProbable causes:"
+                    "\n  - Top-K potentially too high"
+                    "\n  - Similarity threshold needs adjustment"
+                ),
+                suggestion=(
+                    "Increase similarity threshold to filter out "
+                    "less relevant documents"
+                ),
                 priority="medium",
                 parameter_adjustments={
-                    "retriever.similarity_threshold": {"action": "increase", "suggested_value": 0.75},
+                    "retriever.similarity_threshold": {
+                        "action": "increase",
+                        "suggested_value": 0.75,
+                    },
                 },
             ),
         ]
@@ -176,16 +245,16 @@ def simulate_evaluation():
             session.add(rec)
 
         print("\n" + "=" * 60)
-        print("SIMULATION TERMINÉE")
+        print("SIMULATION COMPLETED")
         print("=" * 60)
-        print(f"Interactions créées: {len(interactions)}")
-        print(f"Score global: {overall_score:.1%}")
-        print(f"Score retrieval: {retrieval_score:.1%}")
-        print(f"Score génération: {generation_score:.1%}")
-        print(f"Taux d'hallucination: {hallucination_rate:.1%}")
-        print(f"Recommandations: {len(recommendations)}")
+        print(f"Interactions created: {len(interactions)}")
+        print(f"Overall score: {overall_score:.1%}")
+        print(f"Retrieval score: {retrieval_score:.1%}")
+        print(f"Generation score: {generation_score:.1%}")
+        print(f"Hallucination rate: {hallucination_rate:.1%}")
+        print(f"Recommendations: {len(recommendations)}")
         print("=" * 60)
-        print("\nOuvrez http://localhost:8501 pour voir les résultats!")
+        print("\nOpen http://localhost:8501 to see the results!")
 
 
 if __name__ == "__main__":

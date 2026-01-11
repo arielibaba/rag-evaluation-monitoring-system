@@ -121,7 +121,7 @@ def render_trend_chart(evaluations: list[Evaluation]):
             xaxis=dict(title="Date"),
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     else:
         st.info("Not enough data to display trends. At least 2 evaluations are needed.")
 
@@ -251,7 +251,7 @@ def render_metrics_tab(evaluation: Evaluation):
             },
         )
         fig.update_layout(height=300)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 
 def render_recommendations_tab(evaluation: Evaluation):

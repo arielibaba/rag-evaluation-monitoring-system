@@ -2,6 +2,8 @@
 
 A reusable toolkit for evaluating and monitoring RAG (Retrieval-Augmented Generation) chatbot performance. REMS operates as an external observer without modifying the chatbot itself.
 
+**Evaluate any RAG system** - whether running locally or in the cloud - via API calls or JSON file input.
+
 ## Features
 
 - **RAGAS Evaluation**: Faithfulness, Context Precision, Answer Relevancy metrics
@@ -156,7 +158,10 @@ Edit the `.env` file:
 # PostgreSQL database
 REMS_DATABASE_URL=postgresql://user:password@localhost:5432/rems
 
-# Chatbot API to evaluate
+# RAG Chatbot API to evaluate (local or cloud)
+# Examples:
+#   Local:  http://localhost:8000
+#   Cloud:  https://my-rag-chatbot.example.com/api
 REMS_CHATBOT_API_URL=http://localhost:8000
 REMS_CHATBOT_API_KEY=your-api-key
 
@@ -212,18 +217,23 @@ Access **http://localhost:8501** for:
 # Initialize database
 uv run rems init-db
 
-# Run evaluation from JSON file
+# Evaluate from JSON file (offline mode)
 uv run rems evaluate --file interactions.json --name "January Eval"
 
-# Run evaluation from chatbot API
+# Evaluate from RAG API (local or cloud)
+# Fetches interactions from REMS_CHATBOT_API_URL
 uv run rems evaluate --start 2026-01-01 --end 2026-01-07 --limit 100
 
-# Collect interactions without evaluating
+# Collect interactions from RAG API without evaluating
 uv run rems collect --start 2026-01-01 --limit 100 --store
 
 # Display help
 uv run rems --help
 ```
+
+**Two evaluation modes:**
+1. **File-based**: Evaluate pre-collected interactions from a JSON file
+2. **API-based**: Fetch and evaluate interactions directly from your RAG system's API
 
 ## Input Data Format
 

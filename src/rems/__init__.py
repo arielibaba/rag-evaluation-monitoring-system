@@ -28,13 +28,13 @@ __version__ = "0.1.0"
 
 # Re-export core API for convenience
 from rems.core import (
-    RAGEvaluator,
     DiagnosedIssue,
     EvaluationConfig,
     EvaluationResult,
     EvaluationResults,
     Interaction,
     InteractionResult,
+    RAGEvaluator,
     Recommendation,
     Severity,
 )
