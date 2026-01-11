@@ -6,11 +6,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 REMS (RAG Evaluation & Monitoring System) is a reusable Python toolkit for evaluating and monitoring RAG chatbot performance. It operates as an external observer without modifying the chatbot itself.
 
+**Evaluate any RAG system** - whether running locally or in the cloud - via API calls or JSON file input.
+
 **Two usage modes:**
 1. **Library**: Import `RAGEvaluator` directly in your RAG project (minimal dependencies)
 2. **Full Application**: Web UI, database storage, PDF reports (requires `pip install rems[app]`)
 
-## Library Usage
+## Project Structure
+
+```
+src/rems/
+├── core/                  # Lightweight library (no DB dependency)
+│   ├── __init__.py        # Exports RAGEvaluator, Interaction, etc.
+│   ├── evaluator.py       # RAGEvaluator class - main API
+│   ├── schemas.py         # Dataclass models (Interaction, EvaluationResults, etc.)
+│   ├── metrics.py         # RAGAS wrapper (MetricsEvaluator)
+│   ├── diagnostic.py      # diagnose() function
+│   └── recommendations.py # generate_recommendations() function
+├── __init__.py            # Re-exports core API
+├── cli.py                 # CLI commands (init-db, collect, evaluate, web)
+├── config.py              # Pydantic settings (env vars)
+├── schemas.py             # Full app DTOs
+├── collector/             # API/file data collection
+├── evaluators/            # Full RAGAS evaluators with DB
+├── diagnostic/            # Full diagnostic engine with DB
+├── recommendations/       # Full recommendation engine with YAML export
+├── models/                # SQLAlchemy models (Evaluation, Interaction, etc.)
+├── reports/               # PDF/HTML generation (WeasyPrint + Jinja2)
+└── web/                   # Streamlit interface
+    ├── app.py             # Main Streamlit app
+    └── pages/             # dashboard.py, history.py, evaluate.py
+```
+
+## Library Usage (Core)
 
 ```python
 from rems import RAGEvaluator, Interaction, EvaluationConfig
@@ -22,13 +50,14 @@ results = evaluator.evaluate([
 print(f"Score: {results.overall_score:.1%}")
 ```
 
-Core module location: `src/rems/core/` (schemas, evaluator, metrics, diagnostic, recommendations)
-
 ## Development Commands
 
 ```bash
-# Install dependencies
+# Install dependencies (core only)
 uv sync
+
+# Install all dependencies (app + dev)
+uv sync --all-extras
 
 # Initialize database (PostgreSQL must be running)
 uv run rems init-db
@@ -40,7 +69,7 @@ uv run rems web --port 8080        # Custom port
 # Run evaluation from JSON file
 uv run rems evaluate --file test_interactions.json --name "My Evaluation"
 
-# Run evaluation from chatbot API
+# Run evaluation from chatbot API (local or cloud)
 uv run rems evaluate --start 2026-01-01 --end 2026-01-07 --limit 100
 
 # Collect interactions without evaluating
@@ -86,7 +115,6 @@ Overall score = (Retrieval × 0.35) + (Generation × 0.65)
 Uses class-based metric imports (not function-based):
 ```python
 from ragas.metrics._context_precision import ContextPrecision
-from ragas.metrics._context_recall import ContextRecall
 from ragas.metrics._faithfulness import Faithfulness
 from ragas.metrics._answer_relevance import ResponseRelevancy
 ```
@@ -118,10 +146,16 @@ Quality level thresholds:
 
 ```env
 REMS_DATABASE_URL=postgresql://user:password@localhost:5432/rems
-REMS_CHATBOT_API_URL=http://localhost:8000
+REMS_CHATBOT_API_URL=http://localhost:8000  # or cloud URL
 REMS_CHATBOT_API_KEY=your-api-key
 REMS_GOOGLE_API_KEY=your-google-api-key
 REMS_EVALUATION_MODEL=gemini-2.0-flash
 REMS_REPORTS_DIR=./reports
 REMS_RECOMMENDATIONS_FILE=./recommendations.yaml
 ```
+
+## Key Files
+
+- `test_interactions.json` - Sample interactions for testing
+- `scripts/simulate_evaluation.py` - Creates fake evaluation data (no LLM needed)
+- `.env.example` - Environment variables template

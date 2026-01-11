@@ -243,12 +243,12 @@ The JSON interactions file must follow this format:
 {
   "interactions": [
     {
-      "query": "What is the tax filing procedure?",
-      "response": "According to article 12, the filing must be done within 3 months...",
+      "query": "What is the return policy?",
+      "response": "Items can be returned within 30 days of purchase...",
       "retrieved_documents": [
         {
-          "content": "Article 12 - Filing deadlines. Companies must...",
-          "source": "tax_code.pdf",
+          "content": "Section 3.1 - Return Policy. Items may be returned within 30 days...",
+          "source": "store_policies.pdf",
           "score": 0.89
         }
       ]
@@ -324,6 +324,28 @@ Generated in the `reports/` folder with:
 | PDF Generation | WeasyPrint + Jinja2 |
 | Configuration | Pydantic Settings |
 
+## Project Structure
+
+```
+src/rems/
+├── core/                  # Lightweight library (no DB dependency)
+│   ├── evaluator.py       # RAGEvaluator class
+│   ├── schemas.py         # Dataclass models
+│   ├── metrics.py         # RAGAS wrapper
+│   ├── diagnostic.py      # Issue diagnosis
+│   └── recommendations.py # Suggestions generator
+├── cli.py                 # CLI commands
+├── config.py              # Pydantic settings
+├── collector/             # API/file data collection
+├── evaluators/            # Full RAGAS evaluators
+├── diagnostic/            # Full diagnostic engine
+├── recommendations/       # Full recommendation engine
+├── models/                # SQLAlchemy models
+├── reports/               # PDF/HTML generation
+└── web/                   # Streamlit interface
+    └── pages/             # Dashboard, History, Evaluate
+```
+
 ## Development
 
 ```bash
@@ -338,6 +360,9 @@ uv run ruff check src/
 
 # Type checking
 uv run mypy src/
+
+# Simulate evaluation (no LLM required)
+uv run python scripts/simulate_evaluation.py
 ```
 
 ## License
