@@ -7,8 +7,80 @@ A reusable toolkit for evaluating and monitoring RAG (Retrieval-Augmented Genera
 - **RAGAS Evaluation**: Faithfulness, Context Precision, Answer Relevancy metrics
 - **Hallucination Detection**: Automatic identification of unfaithful responses
 - **Diagnostic Engine**: Root cause analysis with actionable recommendations
+- **Lightweight Library**: Import directly in your RAG project for evaluation
 - **Web Dashboard**: Streamlit interface with metric visualization and trends
 - **Reports**: PDF, HTML and YAML exports
+
+## Quick Start (Library Usage)
+
+Install the core library with minimal dependencies:
+
+```bash
+pip install rems
+```
+
+Use it in your RAG project:
+
+```python
+from rems import RAGEvaluator, Interaction
+
+# Initialize evaluator (uses RAGAS defaults)
+evaluator = RAGEvaluator()
+
+# Evaluate your RAG interactions
+results = evaluator.evaluate([
+    Interaction(
+        query="What is the return policy?",
+        response="Items can be returned within 30 days of purchase.",
+        contexts=["Return Policy: Items may be returned within 30 days..."]
+    )
+])
+
+# Access results
+print(f"Overall score: {results.overall_score:.1%}")
+print(f"Quality level: {results.quality_level.value}")
+
+# Get diagnostic insights
+for issue in results.issues:
+    print(f"Issue: {issue.symptom} ({issue.severity.value})")
+
+# Get recommendations
+for rec in results.recommendations:
+    print(f"Recommendation: {rec.suggestion}")
+```
+
+### With Custom LLM
+
+```python
+from langchain_google_genai import ChatGoogleGenerativeAI
+from rems import RAGEvaluator, EvaluationConfig
+
+# Custom config with thresholds
+config = EvaluationConfig(
+    faithfulness_threshold=0.8,
+    context_precision_threshold=0.75,
+    hallucination_rate_threshold=0.05
+)
+
+# Custom LLM for evaluation
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+evaluator = RAGEvaluator(llm=llm, config=config)
+results = evaluator.evaluate(interactions)
+```
+
+### Evaluate a Single Interaction
+
+```python
+result = evaluator.evaluate_single(
+    query="What is the shipping cost?",
+    response="Shipping is free for orders over $50.",
+    contexts=["Shipping Policy: Free shipping on orders above $50..."]
+)
+
+print(f"Faithfulness: {result.faithfulness:.1%}")
+print(f"Has hallucination: {result.has_hallucination}")
+```
 
 ## Architecture
 
@@ -39,25 +111,42 @@ A reusable toolkit for evaluating and monitoring RAG (Retrieval-Augmented Genera
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Requirements
-
-- Python 3.12+
-- PostgreSQL 14+
-- [uv](https://github.com/astral-sh/uv) (Python package manager)
-
 ## Installation
+
+### Library Only (Minimal Dependencies)
+
+```bash
+pip install rems
+```
+
+Core dependencies: `ragas`, `datasets`, `langchain`, `pydantic`
+
+### Full Application (Web UI, Database, Reports)
+
+```bash
+pip install rems[app]
+```
+
+Additional dependencies: `streamlit`, `sqlalchemy`, `weasyprint`, etc.
+
+### Development Setup
 
 ```bash
 # Clone the repository
 git clone https://github.com/arielibaba/rag-evaluation-monitoring-system.git
 cd rag-evaluation-monitoring-system
 
-# Install dependencies
-uv sync
+# Install all dependencies
+uv sync --all-extras
 
 # Configure environment variables
 cp .env.example .env
 ```
+
+Requirements for full application:
+- Python 3.12+
+- PostgreSQL 14+
+- [uv](https://github.com/astral-sh/uv) (Python package manager)
 
 ## Configuration
 

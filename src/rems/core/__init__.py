@@ -1,34 +1,31 @@
 """
-REMS - RAG Evaluation & Monitoring System.
+REMS Core - Lightweight RAG Evaluation Library.
 
-A toolkit for evaluating and monitoring RAG chatbot performance.
+A simple, dependency-light library for evaluating RAG systems.
+No database, no web interface - just evaluation.
 
-Quick Start (Core Library):
-    from rems import RAGEvaluator, Interaction
+Usage:
+    from rems.core import RAGEvaluator, Interaction
 
-    evaluator = RAGEvaluator()
-    results = evaluator.evaluate([
+    # Create interactions to evaluate
+    interactions = [
         Interaction(
             query="What is the return policy?",
             response="Items can be returned within 30 days...",
             contexts=["Section 3.1 - Return Policy..."]
         )
-    ])
+    ]
+
+    # Evaluate
+    evaluator = RAGEvaluator()
+    results = evaluator.evaluate(interactions)
 
     print(f"Overall score: {results.overall_score:.1%}")
-    print(f"Quality level: {results.quality_level.value}")
     print(f"Recommendations: {len(results.recommendations)}")
-
-Full Application:
-    Install with: pip install rems[app]
-    Then use the CLI: `rems web` or `rems evaluate --file interactions.json`
 """
 
-__version__ = "0.1.0"
-
-# Re-export core API for convenience
-from rems.core import (
-    RAGEvaluator,
+from rems.core.evaluator import RAGEvaluator
+from rems.core.schemas import (
     DiagnosedIssue,
     EvaluationConfig,
     EvaluationResult,
@@ -40,8 +37,6 @@ from rems.core import (
 )
 
 __all__ = [
-    # Version
-    "__version__",
     # Main class
     "RAGEvaluator",
     # Data classes

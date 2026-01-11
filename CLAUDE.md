@@ -6,6 +6,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 REMS (RAG Evaluation & Monitoring System) is a reusable Python toolkit for evaluating and monitoring RAG chatbot performance. It operates as an external observer without modifying the chatbot itself.
 
+**Two usage modes:**
+1. **Library**: Import `RAGEvaluator` directly in your RAG project (minimal dependencies)
+2. **Full Application**: Web UI, database storage, PDF reports (requires `pip install rems[app]`)
+
+## Library Usage
+
+```python
+from rems import RAGEvaluator, Interaction, EvaluationConfig
+
+evaluator = RAGEvaluator()
+results = evaluator.evaluate([
+    Interaction(query="...", response="...", contexts=["..."])
+])
+print(f"Score: {results.overall_score:.1%}")
+```
+
+Core module location: `src/rems/core/` (schemas, evaluator, metrics, diagnostic, recommendations)
+
 ## Development Commands
 
 ```bash
