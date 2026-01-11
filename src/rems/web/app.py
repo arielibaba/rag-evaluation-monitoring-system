@@ -12,8 +12,8 @@ st.set_page_config(
 # Navigation
 pages = {
     "Dashboard": "pages/1_dashboard.py",
-    "Historique": "pages/2_history.py",
-    "Nouvelle évaluation": "pages/3_evaluate.py",
+    "History": "pages/2_history.py",
+    "New Evaluation": "pages/3_evaluate.py",
 }
 
 
@@ -35,7 +35,7 @@ def main():
         """
         **Version** 0.1.0
 
-        [Documentation](https://github.com/arielibaba/rag-evaluation-monitoring-system-for-regulatory)
+        [Documentation](https://github.com/arielibaba/rag-evaluation-monitoring-system)
         """
     )
 
@@ -43,10 +43,10 @@ def main():
     if page == "Dashboard":
         from rems.web.pages import dashboard
         dashboard.render()
-    elif page == "Historique":
+    elif page == "History":
         from rems.web.pages import history
         history.render()
-    elif page == "Nouvelle évaluation":
+    elif page == "New Evaluation":
         from rems.web.pages import evaluate
         evaluate.render()
 

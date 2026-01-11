@@ -1,41 +1,37 @@
 """Evaluate page - Trigger new evaluations."""
 
 import json
-import tempfile
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import streamlit as st
 
 from rems.collector import APICollector
 from rems.config import settings
-from rems.diagnostic import DiagnosticEngine
 from rems.evaluators import EvaluationOrchestrator
 from rems.models import init_db
 from rems.recommendations import RecommendationEngine
 from rems.reports import ReportGenerator
-from rems.schemas import InteractionSchema
 
 
 def render():
     """Render the evaluate page."""
-    st.title("🚀 Nouvelle évaluation")
-    st.markdown("Lancez une évaluation sur les interactions du chatbot")
+    st.title("🚀 New Evaluation")
+    st.markdown("Run an evaluation on chatbot interactions")
 
     # Check configuration
     if not check_configuration():
         return
 
     # Data source selection
-    st.subheader("Source des données")
+    st.subheader("Data Source")
 
     source = st.radio(
-        "Choisissez la source des interactions :",
-        options=["Fichier JSON", "API du chatbot"],
+        "Choose the interactions source:",
+        options=["JSON File", "Chatbot API"],
         horizontal=True,
     )
 
-    if source == "Fichier JSON":
+    if source == "JSON File":
         render_file_upload()
     else:
         render_api_fetch()
@@ -46,14 +42,14 @@ def check_configuration() -> bool:
     issues = []
 
     if not settings.google_api_key:
-        issues.append("❌ `REMS_GOOGLE_API_KEY` non configuré")
+        issues.append("❌ `REMS_GOOGLE_API_KEY` not configured")
 
     if issues:
-        st.error("Configuration incomplète")
+        st.error("Incomplete configuration")
         for issue in issues:
             st.markdown(issue)
         st.markdown("""
-        Configurez les variables d'environnement dans le fichier `.env` :
+        Configure environment variables in the `.env` file:
         ```
         REMS_GOOGLE_API_KEY=your-google-api-key
         REMS_DATABASE_URL=postgresql://user:pass@localhost:5432/rems
@@ -67,17 +63,17 @@ def check_configuration() -> bool:
 def render_file_upload():
     """Render the file upload interface."""
     st.markdown("""
-    Uploadez un fichier JSON contenant les interactions à évaluer.
+    Upload a JSON file containing the interactions to evaluate.
 
-    **Format attendu :**
+    **Expected format:**
     ```json
     {
         "interactions": [
             {
-                "query": "Question de l'utilisateur",
-                "response": "Réponse du chatbot",
+                "query": "User question",
+                "response": "Chatbot response",
                 "retrieved_documents": [
-                    {"content": "Contenu du document", "source": "source.pdf"}
+                    {"content": "Document content", "source": "source.pdf"}
                 ]
             }
         ]
@@ -86,9 +82,9 @@ def render_file_upload():
     """)
 
     uploaded_file = st.file_uploader(
-        "Choisir un fichier JSON",
+        "Choose a JSON file",
         type=["json"],
-        help="Fichier contenant les interactions à évaluer"
+        help="File containing interactions to evaluate"
     )
 
     if uploaded_file is not None:
@@ -96,25 +92,25 @@ def render_file_upload():
             data = json.load(uploaded_file)
             interactions_data = data.get("interactions", data if isinstance(data, list) else [])
 
-            st.success(f"✅ {len(interactions_data)} interactions trouvées")
+            st.success(f"✅ {len(interactions_data)} interactions found")
 
             # Preview
-            with st.expander("Aperçu des données"):
+            with st.expander("Data preview"):
                 st.json(interactions_data[:3])
 
             # Evaluation options
             render_evaluation_options(interactions_data, source="file")
 
         except json.JSONDecodeError as e:
-            st.error(f"Erreur de parsing JSON : {e}")
+            st.error(f"JSON parsing error: {e}")
 
 
 def render_api_fetch():
     """Render the API fetch interface."""
     st.markdown(f"""
-    Récupérez les interactions depuis l'API du chatbot.
+    Fetch interactions from the chatbot API.
 
-    **URL configurée :** `{settings.chatbot_api_url}`
+    **Configured URL:** `{settings.chatbot_api_url}`
     """)
 
     col1, col2 = st.columns(2)
@@ -122,21 +118,21 @@ def render_api_fetch():
     with col1:
         # Date range
         default_start = datetime.now() - timedelta(days=7)
-        start_date = st.date_input("Date de début", value=default_start)
+        start_date = st.date_input("Start date", value=default_start)
 
     with col2:
-        end_date = st.date_input("Date de fin", value=datetime.now())
+        end_date = st.date_input("End date", value=datetime.now())
 
     limit = st.number_input(
-        "Nombre maximum d'interactions",
+        "Maximum number of interactions",
         min_value=10,
         max_value=1000,
         value=100,
         step=10,
     )
 
-    if st.button("🔍 Récupérer les interactions"):
-        with st.spinner("Récupération des interactions..."):
+    if st.button("🔍 Fetch interactions"):
+        with st.spinner("Fetching interactions..."):
             try:
                 collector = APICollector()
                 interactions = collector.fetch_interactions(
@@ -148,18 +144,18 @@ def render_api_fetch():
 
                 if interactions:
                     st.session_state.fetched_interactions = interactions
-                    st.success(f"✅ {len(interactions)} interactions récupérées")
+                    st.success(f"✅ {len(interactions)} interactions fetched")
                 else:
-                    st.warning("Aucune interaction trouvée pour cette période")
+                    st.warning("No interactions found for this period")
 
             except Exception as e:
-                st.error(f"Erreur lors de la récupération : {e}")
+                st.error(f"Error fetching interactions: {e}")
 
     # If we have fetched interactions
     if "fetched_interactions" in st.session_state:
         interactions = st.session_state.fetched_interactions
 
-        with st.expander("Aperçu des données"):
+        with st.expander("Data preview"):
             preview = [
                 {"query": i.query[:100], "response": i.response[:100]}
                 for i in interactions[:5]
@@ -172,21 +168,21 @@ def render_api_fetch():
 def render_evaluation_options(interactions_data, source: str):
     """Render evaluation options and trigger button."""
     st.divider()
-    st.subheader("Options d'évaluation")
+    st.subheader("Evaluation Options")
 
     col1, col2 = st.columns(2)
 
     with col1:
         eval_name = st.text_input(
-            "Nom de l'évaluation",
-            value=f"Évaluation {datetime.now().strftime('%d/%m/%Y')}",
+            "Evaluation name",
+            value=f"Evaluation {datetime.now().strftime('%Y-%m-%d')}",
         )
 
     with col2:
-        generate_reports = st.checkbox("Générer les rapports PDF/HTML", value=True)
+        generate_reports = st.checkbox("Generate PDF/HTML reports", value=True)
 
     # Run evaluation button
-    if st.button("▶️ Lancer l'évaluation", type="primary"):
+    if st.button("▶️ Run Evaluation", type="primary"):
         run_evaluation(
             interactions_data=interactions_data,
             source=source,
@@ -218,13 +214,13 @@ def run_evaluation(
 
     try:
         # Step 1: Setup LLM
-        status_text.text("🔧 Configuration du LLM...")
+        status_text.text("🔧 Configuring LLM...")
         progress_bar.progress(1 / total_steps)
 
         llm, embeddings = setup_llm()
 
         # Step 2: Run evaluation
-        status_text.text("📊 Évaluation en cours...")
+        status_text.text("📊 Running evaluation...")
         progress_bar.progress(2 / total_steps)
 
         orchestrator = EvaluationOrchestrator(llm=llm, embeddings=embeddings)
@@ -235,7 +231,7 @@ def run_evaluation(
         )
 
         # Step 3: Generate recommendations
-        status_text.text("💡 Génération des recommandations...")
+        status_text.text("💡 Generating recommendations...")
         progress_bar.progress(3 / total_steps)
 
         recommendation_engine = RecommendationEngine()
@@ -250,30 +246,30 @@ def run_evaluation(
 
         # Step 4: Generate reports (optional)
         if generate_reports:
-            status_text.text("📄 Génération des rapports...")
+            status_text.text("📄 Generating reports...")
             progress_bar.progress(4 / total_steps)
 
             report_generator = ReportGenerator()
-            output_files = report_generator.generate(summary, recommendations)
+            report_generator.generate(summary, recommendations)
 
         # Complete
         progress_bar.progress(1.0)
-        status_text.text("✅ Évaluation terminée !")
+        status_text.text("✅ Evaluation complete!")
 
         # Show results
-        st.success("Évaluation terminée avec succès !")
+        st.success("Evaluation completed successfully!")
 
         # Summary metrics
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            st.metric("Score Global", f"{summary.overall_score:.1%}")
+            st.metric("Overall Score", f"{summary.overall_score:.1%}")
         with col2:
             st.metric("Retrieval", f"{summary.retrieval_score:.1%}")
         with col3:
-            st.metric("Génération", f"{summary.generation_score:.1%}")
+            st.metric("Generation", f"{summary.generation_score:.1%}")
         with col4:
-            st.metric("Qualité", summary.quality_level.upper())
+            st.metric("Quality", summary.quality_level.upper())
 
         # Recommendations count
         if recommendations:
@@ -281,21 +277,21 @@ def run_evaluation(
             high = len([r for r in recommendations if r.priority == "high"])
 
             if critical > 0:
-                st.error(f"⚠️ {critical} recommandation(s) critique(s) détectée(s)")
+                st.error(f"⚠️ {critical} critical recommendation(s) detected")
             if high > 0:
-                st.warning(f"⚡ {high} recommandation(s) haute priorité")
+                st.warning(f"⚡ {high} high priority recommendation(s)")
 
-        st.info(f"📁 Fichier YAML : `{yaml_path}`")
+        st.info(f"📁 YAML file: `{yaml_path}`")
 
         if generate_reports:
-            st.info(f"📁 Rapports générés dans : `{settings.reports_dir}`")
+            st.info(f"📁 Reports generated in: `{settings.reports_dir}`")
 
         # Clear fetched interactions from session
         if "fetched_interactions" in st.session_state:
             del st.session_state.fetched_interactions
 
     except Exception as e:
-        st.error(f"Erreur lors de l'évaluation : {e}")
+        st.error(f"Error during evaluation: {e}")
         st.exception(e)
 
 

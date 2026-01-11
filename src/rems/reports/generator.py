@@ -91,7 +91,7 @@ class ReportGenerator:
     ) -> dict:
         """Build template context from summary and recommendations."""
         return {
-            "title": "Rapport d'Évaluation RAG",
+            "title": "RAG Evaluation Report",
             "generated_at": datetime.now(),
             "summary": summary,
             "recommendations": recommendations,

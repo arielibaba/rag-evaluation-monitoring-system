@@ -51,11 +51,33 @@ class Settings(BaseSettings):
         description="Path for recommendations YAML file",
     )
 
-    # Evaluation thresholds
+    # Quality level thresholds
     threshold_excellent: float = Field(default=0.90)
     threshold_good: float = Field(default=0.75)
     threshold_acceptable: float = Field(default=0.60)
     threshold_poor: float = Field(default=0.40)
+
+    # Diagnostic thresholds (for issue detection)
+    diag_context_precision: float = Field(
+        default=0.70,
+        description="Minimum acceptable context precision",
+    )
+    diag_context_relevancy: float = Field(
+        default=0.70,
+        description="Minimum acceptable context relevancy",
+    )
+    diag_faithfulness: float = Field(
+        default=0.70,
+        description="Minimum acceptable faithfulness (hallucination threshold)",
+    )
+    diag_answer_relevancy: float = Field(
+        default=0.70,
+        description="Minimum acceptable answer relevancy",
+    )
+    diag_hallucination_rate: float = Field(
+        default=0.10,
+        description="Maximum acceptable hallucination rate",
+    )
 
 
 settings = Settings()

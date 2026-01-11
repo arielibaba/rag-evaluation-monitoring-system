@@ -10,7 +10,6 @@ import structlog
 from rems import __version__
 from rems.collector import APICollector
 from rems.config import settings
-from rems.diagnostic import DiagnosticEngine
 from rems.evaluators import EvaluationOrchestrator
 from rems.models import init_db
 from rems.recommendations import RecommendationEngine
@@ -173,8 +172,9 @@ def cmd_web(args):
     logger.info("Launching web interface...", host=args.host, port=args.port)
 
     # Get the path to the web app
-    from rems.web import app
     import os
+
+    from rems.web import app
 
     app_path = os.path.dirname(app.__file__)
     app_file = os.path.join(app_path, "app.py")

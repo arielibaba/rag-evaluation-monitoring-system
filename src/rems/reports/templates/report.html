@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -226,15 +226,15 @@
     <div class="header">
         <h1>{{ title }}</h1>
         <div class="meta">
-            <p>Date d'évaluation : {{ summary.evaluation_date.strftime('%d/%m/%Y %H:%M') }}</p>
-            <p>Interactions analysées : {{ summary.interaction_count }}</p>
-            <p>ID : {{ summary.evaluation_id }}</p>
+            <p>Evaluation date: {{ summary.evaluation_date.strftime('%Y-%m-%d %H:%M') }}</p>
+            <p>Interactions analyzed: {{ summary.interaction_count }}</p>
+            <p>ID: {{ summary.evaluation_id }}</p>
         </div>
     </div>
 
-    <!-- Score Global -->
+    <!-- Overall Score -->
     <div class="section">
-        <h2>Score Global</h2>
+        <h2>Overall Score</h2>
         <div style="text-align: center; margin: 2rem 0;">
             <div class="quality-badge" style="background: {{ summary.quality_level | quality_color }};">
                 {{ summary.overall_score | format_percent }} - {{ summary.quality_level | upper }}
@@ -243,7 +243,7 @@
 
         <div class="score-grid">
             <div class="score-card">
-                <div class="label">Score Retrieval</div>
+                <div class="label">Retrieval Score</div>
                 <div class="value" style="color: {{ 'retrieval' | quality_color if summary.retrieval_score >= 0.75 else '#fd7e14' }};">
                     {{ summary.retrieval_score | format_percent }}
                 </div>
@@ -252,7 +252,7 @@
                 </div>
             </div>
             <div class="score-card">
-                <div class="label">Score Génération</div>
+                <div class="label">Generation Score</div>
                 <div class="value" style="color: {{ 'generation' | quality_color if summary.generation_score >= 0.75 else '#fd7e14' }};">
                     {{ summary.generation_score | format_percent }}
                 </div>
@@ -263,15 +263,15 @@
         </div>
     </div>
 
-    <!-- Métriques Détaillées -->
+    <!-- Detailed Metrics -->
     <div class="section">
-        <h2>Métriques Détaillées</h2>
+        <h2>Detailed Metrics</h2>
         <table class="metrics-table">
             <thead>
                 <tr>
-                    <th>Métrique</th>
-                    <th>Valeur</th>
-                    <th>Composant</th>
+                    <th>Metric</th>
+                    <th>Value</th>
+                    <th>Component</th>
                 </tr>
             </thead>
             <tbody>
@@ -296,10 +296,10 @@
                     <td>Generator</td>
                 </tr>
                 <tr>
-                    <td>Taux d'Hallucination</td>
+                    <td>Hallucination Rate</td>
                     <td style="color: {{ '#dc3545' if metrics.hallucination_rate and metrics.hallucination_rate > 0.1 else '#28a745' }};">
                         {{ metrics.hallucination_rate | format_percent }}
-                        ({{ metrics.total_hallucinations }} cas)
+                        ({{ metrics.total_hallucinations }} cases)
                     </td>
                     <td>Generator</td>
                 </tr>
@@ -307,7 +307,7 @@
         </table>
 
         {% if metrics.score_distribution %}
-        <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Distribution des Scores</h3>
+        <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Score Distribution</h3>
         {% set total = metrics.score_distribution.values() | sum %}
         {% if total > 0 %}
         <div class="distribution-chart">
@@ -339,69 +339,69 @@
         </div>
         <div class="legend">
             <div class="legend-item"><div class="legend-color" style="background: #28a745;"></div> Excellent</div>
-            <div class="legend-item"><div class="legend-color" style="background: #20c997;"></div> Bon</div>
+            <div class="legend-item"><div class="legend-color" style="background: #20c997;"></div> Good</div>
             <div class="legend-item"><div class="legend-color" style="background: #ffc107;"></div> Acceptable</div>
-            <div class="legend-item"><div class="legend-color" style="background: #fd7e14;"></div> Faible</div>
-            <div class="legend-item"><div class="legend-color" style="background: #dc3545;"></div> Critique</div>
+            <div class="legend-item"><div class="legend-color" style="background: #fd7e14;"></div> Poor</div>
+            <div class="legend-item"><div class="legend-color" style="background: #dc3545;"></div> Critical</div>
         </div>
         {% endif %}
         {% endif %}
     </div>
 
-    <!-- Recommandations -->
+    <!-- Recommendations -->
     <div class="section">
-        <h2>Recommandations</h2>
+        <h2>Recommendations</h2>
 
         {% if not recommendations %}
         <p style="color: #28a745; text-align: center; padding: 2rem;">
-            Aucun problème détecté. Le système fonctionne correctement.
+            No issues detected. The system is working correctly.
         </p>
         {% else %}
 
         {% if critical_recommendations %}
-        <h3 style="color: #dc3545; margin-bottom: 1rem;">Critiques ({{ critical_recommendations | length }})</h3>
+        <h3 style="color: #dc3545; margin-bottom: 1rem;">Critical ({{ critical_recommendations | length }})</h3>
         {% for rec in critical_recommendations %}
         <div class="recommendation" style="border-color: #dc3545;">
-            <span class="priority" style="background: #dc3545;">Critique</span>
-            <div class="component">Composant : {{ rec.component | upper }}</div>
+            <span class="priority" style="background: #dc3545;">Critical</span>
+            <div class="component">Component: {{ rec.component | upper }}</div>
             <div class="issue">{{ rec.issue }}</div>
-            <div class="suggestion"><strong>Suggestion :</strong> {{ rec.suggestion }}</div>
+            <div class="suggestion"><strong>Suggestion:</strong> {{ rec.suggestion }}</div>
         </div>
         {% endfor %}
         {% endif %}
 
         {% if high_recommendations %}
-        <h3 style="color: #fd7e14; margin: 1.5rem 0 1rem;">Haute priorité ({{ high_recommendations | length }})</h3>
+        <h3 style="color: #fd7e14; margin: 1.5rem 0 1rem;">High Priority ({{ high_recommendations | length }})</h3>
         {% for rec in high_recommendations %}
         <div class="recommendation" style="border-color: #fd7e14;">
-            <span class="priority" style="background: #fd7e14;">Haute</span>
-            <div class="component">Composant : {{ rec.component | upper }}</div>
+            <span class="priority" style="background: #fd7e14;">High</span>
+            <div class="component">Component: {{ rec.component | upper }}</div>
             <div class="issue">{{ rec.issue }}</div>
-            <div class="suggestion"><strong>Suggestion :</strong> {{ rec.suggestion }}</div>
+            <div class="suggestion"><strong>Suggestion:</strong> {{ rec.suggestion }}</div>
         </div>
         {% endfor %}
         {% endif %}
 
         {% if medium_recommendations %}
-        <h3 style="color: #ffc107; margin: 1.5rem 0 1rem;">Moyenne priorité ({{ medium_recommendations | length }})</h3>
+        <h3 style="color: #ffc107; margin: 1.5rem 0 1rem;">Medium Priority ({{ medium_recommendations | length }})</h3>
         {% for rec in medium_recommendations %}
         <div class="recommendation" style="border-color: #ffc107;">
-            <span class="priority" style="background: #ffc107; color: #333;">Moyenne</span>
-            <div class="component">Composant : {{ rec.component | upper }}</div>
+            <span class="priority" style="background: #ffc107; color: #333;">Medium</span>
+            <div class="component">Component: {{ rec.component | upper }}</div>
             <div class="issue">{{ rec.issue }}</div>
-            <div class="suggestion"><strong>Suggestion :</strong> {{ rec.suggestion }}</div>
+            <div class="suggestion"><strong>Suggestion:</strong> {{ rec.suggestion }}</div>
         </div>
         {% endfor %}
         {% endif %}
 
         {% if low_recommendations %}
-        <h3 style="color: #28a745; margin: 1.5rem 0 1rem;">Basse priorité ({{ low_recommendations | length }})</h3>
+        <h3 style="color: #28a745; margin: 1.5rem 0 1rem;">Low Priority ({{ low_recommendations | length }})</h3>
         {% for rec in low_recommendations %}
         <div class="recommendation" style="border-color: #28a745;">
-            <span class="priority" style="background: #28a745;">Basse</span>
-            <div class="component">Composant : {{ rec.component | upper }}</div>
+            <span class="priority" style="background: #28a745;">Low</span>
+            <div class="component">Component: {{ rec.component | upper }}</div>
             <div class="issue">{{ rec.issue }}</div>
-            <div class="suggestion"><strong>Suggestion :</strong> {{ rec.suggestion }}</div>
+            <div class="suggestion"><strong>Suggestion:</strong> {{ rec.suggestion }}</div>
         </div>
         {% endfor %}
         {% endif %}
@@ -410,8 +410,8 @@
     </div>
 
     <div class="footer">
-        <p>Rapport généré par REMS (RAG Evaluation & Monitoring System) v0.1.0</p>
-        <p>{{ generated_at.strftime('%d/%m/%Y à %H:%M:%S') }}</p>
+        <p>Report generated by REMS (RAG Evaluation & Monitoring System) v0.1.0</p>
+        <p>{{ generated_at.strftime('%Y-%m-%d at %H:%M:%S') }}</p>
     </div>
 </body>
 </html>

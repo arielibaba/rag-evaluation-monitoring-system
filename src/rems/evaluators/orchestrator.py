@@ -1,6 +1,6 @@
 """Evaluation Orchestrator - Coordinates all evaluators and aggregates results."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 
@@ -13,7 +13,6 @@ from rems.schemas import (
     EvaluationResultSchema,
     EvaluationSummary,
     InteractionSchema,
-    RecommendationSchema,
 )
 
 logger = structlog.get_logger()
@@ -97,12 +96,12 @@ class EvaluationOrchestrator:
                 description=description,
             )
         else:
-            evaluation_id = f"eval_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
+            evaluation_id = f"eval_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
 
         # Create summary (recommendations will be added by RecommendationEngine)
         summary = EvaluationSummary(
             evaluation_id=evaluation_id,
-            evaluation_date=datetime.now(timezone.utc),
+            evaluation_date=datetime.now(UTC),
             interaction_count=len(interactions),
             overall_score=overall_score,
             retrieval_score=retrieval_score,
@@ -172,10 +171,10 @@ class EvaluationOrchestrator:
         values = list(results.values())
 
         # Calculate averages
-        context_precisions = [r.context_precision for r in values if r.context_precision is not None]
-        context_relevancies = [r.context_relevancy for r in values if r.context_relevancy is not None]
-        faithfulness_scores = [r.faithfulness for r in values if r.faithfulness is not None]
-        answer_relevancies = [r.answer_relevancy for r in values if r.answer_relevancy is not None]
+        ctx_prec = [r.context_precision for r in values if r.context_precision is not None]
+        ctx_rel = [r.context_relevancy for r in values if r.context_relevancy is not None]
+        faith = [r.faithfulness for r in values if r.faithfulness is not None]
+        ans_rel = [r.answer_relevancy for r in values if r.answer_relevancy is not None]
 
         # Hallucination stats
         hallucinations = [r for r in values if r.has_hallucination]
@@ -183,20 +182,24 @@ class EvaluationOrchestrator:
         hallucination_rate = total_hallucinations / len(values) if values else 0
 
         # Score distribution
-        overall_scores = [r.overall_score for r in values if r.overall_score is not None]
+        scores = [r.overall_score for r in values if r.overall_score is not None]
+        t_exc = settings.threshold_excellent
+        t_good = settings.threshold_good
+        t_acc = settings.threshold_acceptable
+        t_poor = settings.threshold_poor
         distribution = {
-            "excellent": len([s for s in overall_scores if s >= settings.threshold_excellent]),
-            "good": len([s for s in overall_scores if settings.threshold_good <= s < settings.threshold_excellent]),
-            "acceptable": len([s for s in overall_scores if settings.threshold_acceptable <= s < settings.threshold_good]),
-            "poor": len([s for s in overall_scores if settings.threshold_poor <= s < settings.threshold_acceptable]),
-            "critical": len([s for s in overall_scores if s < settings.threshold_poor]),
+            "excellent": len([s for s in scores if s >= t_exc]),
+            "good": len([s for s in scores if t_good <= s < t_exc]),
+            "acceptable": len([s for s in scores if t_acc <= s < t_good]),
+            "poor": len([s for s in scores if t_poor <= s < t_acc]),
+            "critical": len([s for s in scores if s < t_poor]),
         }
 
         return EvaluationMetrics(
-            avg_context_precision=sum(context_precisions) / len(context_precisions) if context_precisions else None,
-            avg_context_relevancy=sum(context_relevancies) / len(context_relevancies) if context_relevancies else None,
-            avg_faithfulness=sum(faithfulness_scores) / len(faithfulness_scores) if faithfulness_scores else None,
-            avg_answer_relevancy=sum(answer_relevancies) / len(answer_relevancies) if answer_relevancies else None,
+            avg_context_precision=sum(ctx_prec) / len(ctx_prec) if ctx_prec else None,
+            avg_context_relevancy=sum(ctx_rel) / len(ctx_rel) if ctx_rel else None,
+            avg_faithfulness=sum(faith) / len(faith) if faith else None,
+            avg_answer_relevancy=sum(ans_rel) / len(ans_rel) if ans_rel else None,
             hallucination_rate=hallucination_rate,
             total_hallucinations=total_hallucinations,
             score_distribution=distribution,
@@ -253,7 +256,7 @@ class EvaluationOrchestrator:
                 retrieval_score=retrieval_score,
                 generation_score=generation_score,
                 metrics=metrics.model_dump(),
-                completed_at=datetime.now(timezone.utc),
+                completed_at=datetime.now(UTC),
             )
             session.add(evaluation)
             session.flush()

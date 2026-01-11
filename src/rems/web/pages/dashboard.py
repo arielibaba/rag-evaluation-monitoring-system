@@ -1,6 +1,5 @@
 """Dashboard page - Overview of the latest evaluation."""
 
-from datetime import datetime
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -13,24 +12,24 @@ from rems.models import Evaluation, get_session
 def render():
     """Render the dashboard page."""
     st.title("📊 Dashboard")
-    st.markdown("Vue d'ensemble de la dernière évaluation")
+    st.markdown("Overview of the latest evaluation")
 
     # Get the latest evaluation
     latest_eval = get_latest_evaluation()
 
     if latest_eval is None:
-        st.warning("Aucune évaluation disponible. Lancez une première évaluation.")
+        st.warning("No evaluation available. Run your first evaluation.")
         return
 
     # Header with evaluation info
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Date d'évaluation", latest_eval.created_at.strftime("%d/%m/%Y"))
+        st.metric("Evaluation Date", latest_eval.created_at.strftime("%Y-%m-%d"))
     with col2:
-        st.metric("Interactions analysées", latest_eval.interaction_count)
+        st.metric("Interactions Analyzed", latest_eval.interaction_count)
     with col3:
         quality_level = get_quality_level(latest_eval.overall_score or 0)
-        st.metric("Niveau de qualité", quality_level.upper())
+        st.metric("Quality Level", quality_level.upper())
 
     st.divider()
 
@@ -40,19 +39,19 @@ def render():
     st.divider()
 
     # Component scores
-    st.subheader("Scores par composant")
+    st.subheader("Component Scores")
     render_component_scores(latest_eval)
 
     st.divider()
 
     # Detailed metrics
-    st.subheader("Métriques détaillées")
+    st.subheader("Detailed Metrics")
     render_detailed_metrics(latest_eval)
 
     # Recommendations summary
     if latest_eval.recommendations:
         st.divider()
-        st.subheader("Recommandations prioritaires")
+        st.subheader("Priority Recommendations")
         render_recommendations_summary(latest_eval)
 
 
@@ -72,13 +71,13 @@ def get_quality_level(score: float) -> str:
     if score >= 0.90:
         return "excellent"
     elif score >= 0.75:
-        return "bon"
+        return "good"
     elif score >= 0.60:
         return "acceptable"
     elif score >= 0.40:
-        return "faible"
+        return "poor"
     else:
-        return "critique"
+        return "critical"
 
 
 def get_quality_color(score: float) -> str:
@@ -108,7 +107,7 @@ def render_score_overview(evaluation: Evaluation):
             mode="gauge+number",
             value=score * 100,
             domain={'x': [0, 1], 'y': [0, 1]},
-            title={'text': "Score Global", 'font': {'size': 24}},
+            title={'text': "Overall Score", 'font': {'size': 24}},
             number={'suffix': "%", 'font': {'size': 48}},
             gauge={
                 'axis': {'range': [0, 100], 'tickwidth': 1},
@@ -147,7 +146,7 @@ def render_component_scores(evaluation: Evaluation):
             "🔍 Retrieval",
             f"{retrieval_score:.1%}",
             delta=delta,
-            help="Qualité de la récupération des documents (context precision + relevancy)"
+            help="Quality of document retrieval (context precision + relevancy)"
         )
 
         # Progress bar
@@ -157,10 +156,10 @@ def render_component_scores(evaluation: Evaluation):
         generation_score = evaluation.generation_score or 0
 
         st.metric(
-            "🤖 Génération",
+            "🤖 Generation",
             f"{generation_score:.1%}",
             delta=None,
-            help="Qualité de la génération (faithfulness + answer relevancy)"
+            help="Quality of generation (faithfulness + answer relevancy)"
         )
 
         st.progress(generation_score)
@@ -187,11 +186,11 @@ def render_detailed_metrics(evaluation: Evaluation):
                     st.text(f"{value:.1%}")
 
     with col2:
-        st.markdown("**Génération**")
+        st.markdown("**Generation**")
         metrics_data = {
             "Faithfulness": metrics.get("avg_faithfulness"),
             "Answer Relevancy": metrics.get("avg_answer_relevancy"),
-            "Taux d'hallucination": metrics.get("hallucination_rate"),
+            "Hallucination Rate": metrics.get("hallucination_rate"),
         }
         for name, value in metrics_data.items():
             if value is not None:
@@ -199,12 +198,14 @@ def render_detailed_metrics(evaluation: Evaluation):
                 with col_a:
                     st.text(name)
                 with col_b:
-                    color = "red" if name == "Taux d'hallucination" and value > 0.1 else "inherit"
-                    st.markdown(f"<span style='color:{color}'>{value:.1%}</span>", unsafe_allow_html=True)
+                    is_hall = name == "Hallucination Rate" and value > 0.1
+                    color = "red" if is_hall else "inherit"
+                    html = f"<span style='color:{color}'>{value:.1%}</span>"
+                    st.markdown(html, unsafe_allow_html=True)
 
     # Score distribution chart
     if metrics.get("score_distribution"):
-        st.markdown("**Distribution des scores**")
+        st.markdown("**Score Distribution**")
         dist = metrics["score_distribution"]
 
         fig = px.bar(
@@ -218,7 +219,7 @@ def render_detailed_metrics(evaluation: Evaluation):
                 "poor": "#fd7e14",
                 "critical": "#dc3545",
             },
-            labels={"x": "Niveau", "y": "Nombre d'interactions"},
+            labels={"x": "Level", "y": "Number of interactions"},
         )
         fig.update_layout(showlegend=False, height=250)
         st.plotly_chart(fig, use_container_width=True)
@@ -233,17 +234,17 @@ def render_recommendations_summary(evaluation: Evaluation):
     high = [r for r in recommendations if r.priority == "high"]
 
     if critical:
-        st.error(f"⚠️ {len(critical)} recommandation(s) critique(s)")
+        st.error(f"⚠️ {len(critical)} critical recommendation(s)")
         for rec in critical[:2]:
             with st.expander(f"🔴 [{rec.component.upper()}] {rec.suggestion[:80]}..."):
-                st.markdown(f"**Problème:** {rec.issue}")
+                st.markdown(f"**Issue:** {rec.issue}")
                 st.markdown(f"**Suggestion:** {rec.suggestion}")
 
     if high:
-        st.warning(f"⚡ {len(high)} recommandation(s) haute priorité")
+        st.warning(f"⚡ {len(high)} high priority recommendation(s)")
         for rec in high[:2]:
             with st.expander(f"🟠 [{rec.component.upper()}] {rec.suggestion[:80]}..."):
-                st.markdown(f"**Problème:** {rec.issue}")
+                st.markdown(f"**Issue:** {rec.issue}")
                 st.markdown(f"**Suggestion:** {rec.suggestion}")
 
-    st.info("Voir l'historique pour les détails complets et le téléchargement du rapport.")
+    st.info("See history for full details and report download.")

@@ -4,15 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-REMS (RAG Evaluation & Monitoring System) is a Python module that evaluates and monitors the performance of an existing regulatory RAG chatbot. It operates as an external observer without modifying the chatbot itself.
-
-Key features:
-- RAGAS-based evaluation (Faithfulness, Context Precision, Answer Relevancy)
-- Hallucination detection (faithfulness < 0.7 threshold)
-- Diagnostic engine with root cause analysis
-- Recommendations exported to YAML for manual application
-- PDF/HTML reports with visualizations
-- Streamlit web dashboard
+REMS (RAG Evaluation & Monitoring System) is a reusable Python toolkit for evaluating and monitoring RAG chatbot performance. It operates as an external observer without modifying the chatbot itself.
 
 ## Development Commands
 
@@ -33,7 +25,10 @@ uv run rems evaluate --file test_interactions.json --name "My Evaluation"
 # Run evaluation from chatbot API
 uv run rems evaluate --start 2026-01-01 --end 2026-01-07 --limit 100
 
-# Simulate evaluation (no LLM required, for testing)
+# Collect interactions without evaluating
+uv run rems collect --start 2026-01-01 --limit 100 --store
+
+# Simulate evaluation (no LLM required, for testing UI/reports)
 uv run python scripts/simulate_evaluation.py
 
 # Linting and type checking
@@ -54,52 +49,52 @@ createdb rems
 uv run rems init-db
 ```
 
-## Architecture
+## Evaluation Pipeline
 
-```
-src/rems/
-├── cli.py                 # CLI (init-db, collect, evaluate, web)
-├── config.py              # Pydantic settings (env vars)
-├── schemas.py             # Pydantic DTOs
-├── models/
-│   ├── database.py        # SQLAlchemy models (Interaction, Evaluation, etc.)
-│   └── session.py         # Database session management
-├── collector/
-│   └── api_collector.py   # Fetches interactions from API or JSON file
-├── evaluators/
-│   ├── retrieval_evaluator.py   # Context Precision (RAGAS 0.4.x)
-│   ├── generator_evaluator.py   # Faithfulness, Answer Relevancy
-│   └── orchestrator.py          # Coordinates evaluators
-├── diagnostic/
-│   └── engine.py          # Root cause analysis rules
-├── recommendations/
-│   └── engine.py          # Generates suggestions + YAML export
-├── reports/
-│   ├── generator.py       # PDF/HTML via WeasyPrint
-│   └── templates/         # Jinja2 templates
-└── web/
-    ├── app.py             # Streamlit main app
-    └── pages/             # dashboard.py, history.py, evaluate.py
-```
+The evaluation flow follows this sequence:
 
-## Key Files
+1. **APICollector** fetches interactions from chatbot API or JSON file
+2. **EvaluationOrchestrator** coordinates evaluators:
+   - **RetrievalEvaluator**: Context Precision via RAGAS
+   - **GeneratorEvaluator**: Faithfulness + Answer Relevancy via RAGAS
+3. **DiagnosticEngine** analyzes results for root causes
+4. **RecommendationEngine** generates actionable suggestions → YAML export
+5. **ReportGenerator** creates PDF/HTML reports
 
-- `test_interactions.json` - Sample interactions for testing
-- `scripts/simulate_evaluation.py` - Creates fake evaluation data (no LLM needed)
-- `scripts/weekly_evaluation.sh` - Cron script for scheduled evaluations
-- `recommendations.yaml` - Output file with actionable recommendations
-- `reports/` - Generated PDF/HTML reports
+Overall score = (Retrieval × 0.35) + (Generation × 0.65)
 
-## RAGAS 0.4.x Notes
+## RAGAS 0.4.x API
 
-Uses new class-based metric imports:
+Uses class-based metric imports (not function-based):
 ```python
 from ragas.metrics._context_precision import ContextPrecision
+from ragas.metrics._context_recall import ContextRecall
 from ragas.metrics._faithfulness import Faithfulness
 from ragas.metrics._answer_relevance import ResponseRelevancy
 ```
 
-Dataset columns: `user_input`, `response`, `retrieved_contexts` (not `question`, `answer`, `contexts`)
+Dataset columns: `user_input`, `response`, `retrieved_contexts` (not the old `question`, `answer`, `contexts`)
+
+## Configurable Thresholds
+
+All diagnostic thresholds can be configured via environment variables:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `REMS_DIAG_FAITHFULNESS` | 0.70 | Hallucination detection threshold |
+| `REMS_DIAG_CONTEXT_PRECISION` | 0.70 | Minimum context precision |
+| `REMS_DIAG_CONTEXT_RELEVANCY` | 0.70 | Minimum context relevancy |
+| `REMS_DIAG_ANSWER_RELEVANCY` | 0.70 | Minimum answer relevancy |
+| `REMS_DIAG_HALLUCINATION_RATE` | 0.10 | Maximum hallucination rate |
+
+Quality level thresholds:
+| Level | Score |
+|-------|-------|
+| Excellent | ≥ 90% |
+| Good | 75-89% |
+| Acceptable | 60-74% |
+| Poor | 40-59% |
+| Critical | < 40% |
 
 ## Environment Variables
 
@@ -112,11 +107,3 @@ REMS_EVALUATION_MODEL=gemini-2.0-flash
 REMS_REPORTS_DIR=./reports
 REMS_RECOMMENDATIONS_FILE=./recommendations.yaml
 ```
-
-## Domain Context
-
-Regulatory/legal chatbot evaluation where:
-- Accuracy is critical (legal consequences for errors)
-- All responses must be traceable to source documents
-- Hallucinations flagged when faithfulness < 0.7
-- Quality levels: Excellent (≥90%), Good (75-89%), Acceptable (60-74%), Poor (40-59%), Critical (<40%)

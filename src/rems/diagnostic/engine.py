@@ -6,7 +6,7 @@ from enum import Enum
 import structlog
 
 from rems.config import settings
-from rems.schemas import EvaluationMetrics, EvaluationSummary
+from rems.schemas import EvaluationSummary
 
 logger = structlog.get_logger()
 
@@ -46,43 +46,43 @@ DIAGNOSTIC_RULES = {
     "low_context_precision": {
         "component": Component.RETRIEVER,
         "causes": [
-            "Seuil de similarité trop bas (documents non pertinents inclus)",
-            "Top-K trop élevé (trop de documents récupérés)",
-            "Qualité des embeddings insuffisante pour le domaine réglementaire",
+            "Similarity threshold too low (irrelevant documents included)",
+            "Top-K too high (too many documents retrieved)",
+            "Embedding quality insufficient for the domain",
         ],
     },
     "low_context_relevancy": {
         "component": Component.RETRIEVER,
         "causes": [
-            "Query mal formulée ou trop vague",
-            "Chunking inadapté (chunks trop grands ou trop petits)",
-            "Embeddings non optimisés pour le vocabulaire juridique",
+            "Query poorly formulated or too vague",
+            "Chunking strategy inadequate (chunks too large or too small)",
+            "Embeddings not optimized for domain vocabulary",
         ],
     },
     "low_faithfulness": {
         "component": Component.GENERATOR,
         "causes": [
-            "Température du LLM trop élevée (génération trop créative)",
-            "Prompt système insuffisamment contraignant",
-            "Contexte fourni insuffisant (top-K trop faible)",
-            "Absence d'instruction explicite de ne pas inventer",
+            "LLM temperature too high (generation too creative)",
+            "System prompt not constraining enough",
+            "Insufficient context provided (top-K too low)",
+            "Missing explicit instruction not to invent information",
         ],
     },
     "low_answer_relevancy": {
         "component": Component.GENERATOR,
         "causes": [
-            "Prompt ne guidant pas assez vers une réponse directe",
-            "LLM trop verbeux ou hors sujet",
-            "Mauvaise compréhension de la question par le LLM",
+            "Prompt not guiding towards direct answers",
+            "LLM too verbose or off-topic",
+            "Poor understanding of the question by the LLM",
         ],
     },
     "high_hallucination_rate": {
         "component": Component.GENERATOR,
         "causes": [
-            "Absence de guardrails dans le prompt système",
-            "Température LLM trop élevée",
-            "Contexte insuffisant pour répondre (retriever défaillant)",
-            "LLM non adapté au domaine réglementaire",
+            "Missing guardrails in system prompt",
+            "LLM temperature too high",
+            "Insufficient context to answer (retriever failing)",
+            "LLM not well-suited for the domain",
         ],
     },
 }
@@ -93,11 +93,11 @@ class DiagnosticEngine:
 
     def __init__(
         self,
-        precision_threshold: float = 0.70,
-        relevancy_threshold: float = 0.70,
-        faithfulness_threshold: float = 0.75,
-        answer_relevancy_threshold: float = 0.70,
-        hallucination_rate_threshold: float = 0.10,
+        precision_threshold: float | None = None,
+        relevancy_threshold: float | None = None,
+        faithfulness_threshold: float | None = None,
+        answer_relevancy_threshold: float | None = None,
+        hallucination_rate_threshold: float | None = None,
     ):
         """
         Initialize the diagnostic engine with thresholds.
@@ -108,13 +108,15 @@ class DiagnosticEngine:
             faithfulness_threshold: Minimum acceptable faithfulness
             answer_relevancy_threshold: Minimum acceptable answer relevancy
             hallucination_rate_threshold: Maximum acceptable hallucination rate
+
+        If thresholds are not provided, they are loaded from settings.
         """
         self.thresholds = {
-            "context_precision": precision_threshold,
-            "context_relevancy": relevancy_threshold,
-            "faithfulness": faithfulness_threshold,
-            "answer_relevancy": answer_relevancy_threshold,
-            "hallucination_rate": hallucination_rate_threshold,
+            "context_precision": precision_threshold or settings.diag_context_precision,
+            "context_relevancy": relevancy_threshold or settings.diag_context_relevancy,
+            "faithfulness": faithfulness_threshold or settings.diag_faithfulness,
+            "answer_relevancy": answer_relevancy_threshold or settings.diag_answer_relevancy,
+            "hallucination_rate": hallucination_rate_threshold or settings.diag_hallucination_rate,
         }
 
     def diagnose(self, summary: EvaluationSummary) -> list[DiagnosedIssue]:
@@ -216,7 +218,10 @@ class DiagnosticEngine:
             deviation = (metric_value - threshold) / threshold if threshold > 0 else metric_value
         else:
             # For metrics where being below threshold is bad
-            deviation = (threshold - metric_value) / threshold if threshold > 0 else 1 - metric_value
+            if threshold > 0:
+                deviation = (threshold - metric_value) / threshold
+            else:
+                deviation = 1 - metric_value
 
         if deviation > 0.5:
             severity = Severity.CRITICAL
@@ -229,9 +234,9 @@ class DiagnosticEngine:
 
         # Create symptom description
         if is_upper_bound:
-            symptom = f"{metric_name} trop élevé: {metric_value:.2%} (seuil: {threshold:.2%})"
+            symptom = f"{metric_name} too high: {metric_value:.2%} (threshold: {threshold:.2%})"
         else:
-            symptom = f"{metric_name} trop faible: {metric_value:.2%} (seuil: {threshold:.2%})"
+            symptom = f"{metric_name} too low: {metric_value:.2%} (threshold: {threshold:.2%})"
 
         return DiagnosedIssue(
             component=rule["component"],

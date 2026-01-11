@@ -6,7 +6,7 @@ import structlog
 import yaml
 
 from rems.config import settings
-from rems.diagnostic.engine import Component, DiagnosedIssue, DiagnosticEngine, Severity
+from rems.diagnostic.engine import DiagnosedIssue, DiagnosticEngine
 from rems.models import Recommendation, get_session
 from rems.schemas import EvaluationSummary, RecommendationSchema
 
@@ -17,14 +17,17 @@ logger = structlog.get_logger()
 RECOMMENDATION_RULES: dict[str, dict] = {
     # Retriever recommendations
     "low_context_precision": {
-        "suggestion": "Réduire le nombre de documents récupérés (top_k) ou augmenter le seuil de similarité",
+        "suggestion": (
+            "Reduce the number of retrieved documents (top_k) "
+            "or increase the similarity threshold"
+        ),
         "parameter_adjustments": {
             "retriever.top_k": {"action": "decrease", "suggested_value": 3},
             "retriever.similarity_threshold": {"action": "increase", "suggested_value": 0.75},
         },
     },
     "low_context_relevancy": {
-        "suggestion": "Optimiser le chunking des documents ou améliorer les embeddings",
+        "suggestion": "Optimize document chunking or improve embeddings quality",
         "parameter_adjustments": {
             "indexing.chunk_size": {"action": "adjust", "suggested_value": 512},
             "indexing.chunk_overlap": {"action": "adjust", "suggested_value": 50},
@@ -32,42 +35,45 @@ RECOMMENDATION_RULES: dict[str, dict] = {
     },
     # Generator recommendations
     "low_faithfulness": {
-        "suggestion": "Ajouter des instructions explicites dans le prompt pour citer les sources et ne pas inventer",
+        "suggestion": (
+            "Add explicit instructions in the prompt to cite sources "
+            "and not invent information"
+        ),
         "parameter_adjustments": {
             "generator.temperature": {"action": "decrease", "suggested_value": 0.3},
             "generator.system_prompt": {
                 "action": "append",
                 "suggested_value": (
-                    "IMPORTANT: Base ta réponse UNIQUEMENT sur les documents fournis. "
-                    "Si l'information n'est pas dans les documents, dis-le explicitement. "
-                    "Ne jamais inventer d'informations."
+                    "IMPORTANT: Base your answer ONLY on the provided documents. "
+                    "If the information is not in the documents, say so explicitly. "
+                    "Never invent information."
                 ),
             },
         },
     },
     "low_answer_relevancy": {
-        "suggestion": "Améliorer le prompt pour guider vers des réponses plus directes et pertinentes",
+        "suggestion": "Improve the prompt to guide towards more direct and relevant answers",
         "parameter_adjustments": {
             "generator.system_prompt": {
                 "action": "append",
                 "suggested_value": (
-                    "Réponds de manière concise et directe à la question posée. "
-                    "Évite les digressions."
+                    "Answer concisely and directly to the question asked. "
+                    "Avoid digressions."
                 ),
             },
         },
     },
     "high_hallucination_rate": {
-        "suggestion": "Réduire la température du LLM et renforcer les guardrails du prompt",
+        "suggestion": "Reduce LLM temperature and strengthen prompt guardrails",
         "parameter_adjustments": {
             "generator.temperature": {"action": "decrease", "suggested_value": 0.2},
             "generator.max_tokens": {"action": "decrease", "suggested_value": 1024},
             "generator.system_prompt": {
                 "action": "append",
                 "suggested_value": (
-                    "RÈGLE ABSOLUE: Tu ne dois JAMAIS inventer de texte de loi, d'article, "
-                    "de date ou de référence. Si tu n'as pas l'information exacte dans le contexte, "
-                    "réponds 'Je n'ai pas cette information dans les documents fournis.'"
+                    "ABSOLUTE RULE: You must NEVER invent facts, dates, or references. "
+                    "If you don't have the exact information in the context, "
+                    "respond 'I don't have this information in the provided documents.'"
                 ),
             },
         },
@@ -135,11 +141,11 @@ class RecommendationEngine:
         rule = RECOMMENDATION_RULES.get(rule_key, {})
 
         # Build suggestion text
-        suggestion = rule.get("suggestion", f"Investiguer le problème de {issue.metric_name}")
+        suggestion = rule.get("suggestion", f"Investigate the {issue.metric_name} issue")
 
         # Add probable causes to the issue description
         causes_text = "\n".join(f"  - {cause}" for cause in issue.probable_causes[:3])
-        full_issue = f"{issue.symptom}\n\nCauses probables:\n{causes_text}"
+        full_issue = f"{issue.symptom}\n\nProbable causes:\n{causes_text}"
 
         return RecommendationSchema(
             component=issue.component.value,

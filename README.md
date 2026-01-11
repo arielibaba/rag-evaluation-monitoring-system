@@ -1,31 +1,21 @@
 # REMS - RAG Evaluation & Monitoring System
 
-Système d'évaluation et de monitoring pour chatbots RAG réglementaires. REMS est un module externe qui évalue les performances d'un chatbot RAG existant sans le modifier.
+A reusable toolkit for evaluating and monitoring RAG (Retrieval-Augmented Generation) chatbot performance. REMS operates as an external observer without modifying the chatbot itself.
 
-## Contexte
+## Features
 
-Dans le domaine réglementaire, les exigences sont strictes :
-- **Exactitude absolue** : Une erreur sur un texte de loi peut avoir des conséquences juridiques
-- **Traçabilité** : Chaque réponse doit être rattachée à ses sources
-- **Détection des hallucinations** : Les informations inventées doivent être identifiées
-
-REMS répond à ces besoins en fournissant une évaluation objective et continue des performances du chatbot.
-
-## Fonctionnalités
-
-- **Évaluation RAGAS** : Faithfulness, Context Precision, Answer Relevancy
-- **Détection d'hallucinations** : Identification automatique des réponses non fidèles aux sources
-- **Diagnostic automatique** : Analyse des causes racines avec recommandations actionnables
-- **Interface web** : Dashboard Streamlit avec visualisation des métriques et tendances
-- **Rapports** : Export PDF, HTML et YAML des recommandations
-- **Scheduling** : Évaluations hebdomadaires automatisées via cron
+- **RAGAS Evaluation**: Faithfulness, Context Precision, Answer Relevancy metrics
+- **Hallucination Detection**: Automatic identification of unfaithful responses
+- **Diagnostic Engine**: Root cause analysis with actionable recommendations
+- **Web Dashboard**: Streamlit interface with metric visualization and trends
+- **Reports**: PDF, HTML and YAML exports
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    CHATBOT RAG EXISTANT                     │
-│                        (API REST)                           │
+│                    EXISTING RAG CHATBOT                     │
+│                        (REST API)                           │
 └─────────────────────────┬───────────────────────────────────┘
                           │ query + response + retrieved_docs
                           ▼
@@ -49,151 +39,117 @@ REMS répond à ces besoins en fournissant une évaluation objective et continue
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Structure du Code
-
-```
-src/rems/
-├── cli.py                 # Interface ligne de commande
-├── config.py              # Configuration (variables d'environnement)
-├── schemas.py             # Schémas Pydantic (DTOs)
-├── models/                # Modèles SQLAlchemy
-│   ├── database.py        # Définition des tables
-│   └── session.py         # Gestion des sessions DB
-├── collector/             # Collecte des interactions
-│   └── api_collector.py   # Récupération via API ou fichier JSON
-├── evaluators/            # Évaluateurs RAGAS
-│   ├── retrieval_evaluator.py   # Context Precision
-│   ├── generator_evaluator.py   # Faithfulness, Answer Relevancy
-│   └── orchestrator.py          # Coordination des évaluateurs
-├── diagnostic/            # Analyse des causes racines
-│   └── engine.py          # Règles de diagnostic
-├── recommendations/       # Génération des recommandations
-│   └── engine.py          # Suggestions + export YAML
-├── reports/               # Génération des rapports
-│   ├── generator.py       # PDF/HTML via WeasyPrint
-│   └── templates/         # Templates Jinja2
-└── web/                   # Interface Streamlit
-    ├── app.py             # Application principale
-    └── pages/             # Pages du dashboard
-        ├── dashboard.py   # Vue d'ensemble
-        ├── history.py     # Historique + tendances
-        └── evaluate.py    # Lancement d'évaluations
-```
-
-## Prérequis
+## Requirements
 
 - Python 3.12+
 - PostgreSQL 14+
-- [uv](https://github.com/astral-sh/uv) (gestionnaire de paquets Python)
+- [uv](https://github.com/astral-sh/uv) (Python package manager)
 
 ## Installation
 
 ```bash
-# Cloner le repository
-git clone https://github.com/arielibaba/rag-evaluation-monitoring-system-for-regulatory.git
-cd rag-evaluation-monitoring-system-for-regulatory
+# Clone the repository
+git clone https://github.com/arielibaba/rag-evaluation-monitoring-system.git
+cd rag-evaluation-monitoring-system
 
-# Installer les dépendances
+# Install dependencies
 uv sync
 
-# Configurer les variables d'environnement
+# Configure environment variables
 cp .env.example .env
 ```
 
 ## Configuration
 
-Éditez le fichier `.env` :
+Edit the `.env` file:
 
 ```env
-# Base de données PostgreSQL
+# PostgreSQL database
 REMS_DATABASE_URL=postgresql://user:password@localhost:5432/rems
 
-# API du chatbot à évaluer
+# Chatbot API to evaluate
 REMS_CHATBOT_API_URL=http://localhost:8000
 REMS_CHATBOT_API_KEY=your-api-key
 
-# Google API pour l'évaluation LLM-as-judge (Gemini)
+# Google API for LLM-as-judge evaluation (Gemini)
 REMS_GOOGLE_API_KEY=your-google-api-key
 REMS_EVALUATION_MODEL=gemini-2.0-flash
 
-# Répertoires de sortie
+# Output directories
 REMS_REPORTS_DIR=./reports
 REMS_RECOMMENDATIONS_FILE=./recommendations.yaml
+
+# Diagnostic thresholds (optional - these are the defaults)
+REMS_DIAG_CONTEXT_PRECISION=0.70
+REMS_DIAG_CONTEXT_RELEVANCY=0.70
+REMS_DIAG_FAITHFULNESS=0.70
+REMS_DIAG_ANSWER_RELEVANCY=0.70
+REMS_DIAG_HALLUCINATION_RATE=0.10
 ```
 
-### Création de la base de données
+### Database Setup
 
 ```bash
-# Démarrer PostgreSQL (macOS avec Homebrew)
+# Start PostgreSQL (macOS with Homebrew)
 brew services start postgresql@16
 
-# Créer la base de données
+# Create database
 createdb rems
 
-# Initialiser les tables
+# Initialize tables
 uv run rems init-db
 ```
 
-## Utilisation
+## Usage
 
-### Interface Web (Streamlit)
+### Web Interface (Streamlit)
 
 ```bash
-# Lancer le dashboard
+# Launch the dashboard
 uv run rems web
 
-# Sur un port personnalisé
+# Custom port
 uv run rems web --port 8080
 ```
 
-Accédez à **http://localhost:8501** pour :
-- 📊 **Dashboard** : Score global, métriques par composant, gauge
-- 📜 **Historique** : Évolution des scores, comparaison entre évaluations
-- 🚀 **Nouvelle évaluation** : Lancer une évaluation via fichier ou API
+Access **http://localhost:8501** for:
+- 📊 **Dashboard**: Overall score, component metrics, gauge
+- 📜 **History**: Score evolution, comparison between evaluations
+- 🚀 **New Evaluation**: Run evaluation from file or API
 
 ### CLI
 
 ```bash
-# Initialiser la base de données
+# Initialize database
 uv run rems init-db
 
-# Lancer une évaluation depuis un fichier JSON
-uv run rems evaluate --file interactions.json --name "Eval Janvier"
+# Run evaluation from JSON file
+uv run rems evaluate --file interactions.json --name "January Eval"
 
-# Lancer une évaluation depuis l'API du chatbot
+# Run evaluation from chatbot API
 uv run rems evaluate --start 2026-01-01 --end 2026-01-07 --limit 100
 
-# Collecter des interactions sans évaluer
+# Collect interactions without evaluating
 uv run rems collect --start 2026-01-01 --limit 100 --store
 
-# Afficher l'aide
+# Display help
 uv run rems --help
 ```
 
-### Évaluation Hebdomadaire Automatique
+## Input Data Format
 
-```bash
-# Éditer le crontab
-crontab -e
-
-# Ajouter cette ligne (exécution chaque lundi à 8h)
-0 8 * * 1 /chemin/vers/projet/scripts/weekly_evaluation.sh
-```
-
-## Format des Données d'Entrée
-
-Le fichier JSON d'interactions doit respecter ce format :
+The JSON interactions file must follow this format:
 
 ```json
 {
   "interactions": [
     {
-      "query": "Quelle est la procédure de déclaration fiscale ?",
-      "response": "Selon l'article 12 du CGI, la déclaration doit être effectuée dans les 3 mois...",
+      "query": "What is the tax filing procedure?",
+      "response": "According to article 12, the filing must be done within 3 months...",
       "retrieved_documents": [
         {
-          "content": "Article 12 - Délais de déclaration. Les entreprises doivent...",
-          "source": "code_general_impots.pdf",
+          "content": "Article 12 - Filing deadlines. Companies must...",
+          "source": "tax_code.pdf",
           "score": 0.89
         }
       ]
@@ -204,7 +160,7 @@ Le fichier JSON d'interactions doit respecter ce format :
 
 ## Outputs
 
-### Fichier YAML de recommandations
+### YAML Recommendations File
 
 ```yaml
 evaluation_id: "abc123"
@@ -223,59 +179,59 @@ metrics:
 recommendations:
   - component: generator
     priority: high
-    issue: "faithfulness trop faible: 45% (seuil: 70%)"
-    suggestion: "Réduire la température du LLM"
+    issue: "faithfulness too low: 45% (threshold: 70%)"
+    suggestion: "Reduce LLM temperature"
     parameter_adjustments:
       generator.temperature:
         action: decrease
         suggested_value: 0.3
 ```
 
-### Rapports PDF/HTML
+### PDF/HTML Reports
 
-Générés dans le dossier `reports/` avec :
-- Score global avec gauge visuelle
-- Métriques détaillées par composant (Retrieval, Génération)
-- Distribution des scores (Excellent, Bon, Acceptable, Faible, Critique)
-- Recommandations classées par priorité
+Generated in the `reports/` folder with:
+- Overall score with visual gauge
+- Detailed metrics by component (Retrieval, Generation)
+- Score distribution (Excellent, Good, Acceptable, Poor, Critical)
+- Recommendations sorted by priority
 
-## Métriques Évaluées
+## Evaluated Metrics
 
-| Métrique | Description | Composant |
-|----------|-------------|-----------|
-| **Faithfulness** | Fidélité de la réponse aux documents sources | Generator |
-| **Answer Relevancy** | Pertinence de la réponse par rapport à la question | Generator |
-| **Context Precision** | Précision des documents récupérés | Retriever |
-| **Hallucination Rate** | Taux de réponses non fidèles aux sources | Generator |
+| Metric | Description | Component |
+|--------|-------------|-----------|
+| **Faithfulness** | Response fidelity to source documents | Generator |
+| **Answer Relevancy** | Response relevance to the question | Generator |
+| **Context Precision** | Precision of retrieved documents | Retriever |
+| **Hallucination Rate** | Rate of unfaithful responses | Generator |
 
-## Niveaux de Qualité
+## Quality Levels
 
-| Niveau | Score | Action |
-|--------|-------|--------|
-| Excellent | ≥ 90% | Aucune action requise |
-| Bon | 75-89% | Améliorations mineures possibles |
-| Acceptable | 60-74% | Améliorations recommandées |
-| Faible | 40-59% | Actions correctives nécessaires |
-| Critique | < 40% | Intervention urgente requise |
+| Level | Score | Action |
+|-------|-------|--------|
+| Excellent | ≥ 90% | No action required |
+| Good | 75-89% | Minor improvements possible |
+| Acceptable | 60-74% | Improvements recommended |
+| Poor | 40-59% | Corrective actions needed |
+| Critical | < 40% | Urgent intervention required |
 
 ## Technologies
 
-| Composant | Technologie |
-|-----------|-------------|
-| Évaluation RAG | RAGAS 0.4.x |
+| Component | Technology |
+|-----------|------------|
+| RAG Evaluation | RAGAS 0.4.x |
 | LLM-as-judge | LangChain + Google Gemini |
-| Base de données | PostgreSQL + SQLAlchemy |
-| Interface web | Streamlit + Plotly |
-| Génération PDF | WeasyPrint + Jinja2 |
+| Database | PostgreSQL + SQLAlchemy |
+| Web Interface | Streamlit + Plotly |
+| PDF Generation | WeasyPrint + Jinja2 |
 | Configuration | Pydantic Settings |
 
-## Développement
+## Development
 
 ```bash
-# Installer les dépendances de dev
+# Install dev dependencies
 uv sync --all-extras
 
-# Lancer les tests
+# Run tests
 uv run pytest
 
 # Linting
@@ -285,6 +241,6 @@ uv run ruff check src/
 uv run mypy src/
 ```
 
-## Licence
+## License
 
 MIT

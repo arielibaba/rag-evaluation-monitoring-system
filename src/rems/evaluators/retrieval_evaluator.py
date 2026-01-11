@@ -4,7 +4,6 @@ import structlog
 from datasets import Dataset
 from ragas import evaluate
 from ragas.metrics._context_precision import ContextPrecision
-from ragas.metrics._context_recall import ContextRecall
 
 from rems.evaluators.base import BaseEvaluator
 from rems.schemas import EvaluationResultSchema, InteractionSchema
