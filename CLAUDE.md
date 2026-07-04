@@ -154,6 +154,56 @@ REMS_REPORTS_DIR=./reports
 REMS_RECOMMENDATIONS_FILE=./recommendations.yaml
 ```
 
+## Non-negotiable Constraints
+
+Global SOLID / layer-separation principles apply (see `~/.claude/CLAUDE.md`). Project-specific bindings:
+
+- **The core/full seam is the central invariant.** `src/rems/core/` is a lightweight library with only the base deps (`ragas`, `datasets`, `langchain`, `pydantic`) — it must import and run under a plain `pip install rems`, with no DB, no `structlog`, no Streamlit, no `httpx`. The full-app layers (`collector/`, `evaluators/`, `diagnostic/`, `recommendations/`, `models/`, `reports/`, `web/`) require `rems[app]`. **`core/` must never import from an app layer or from `rems.config`.** The two tiers duplicate logic on purpose (`core/evaluator.py` `RAGEvaluator` vs `evaluators/orchestrator.py` `EvaluationOrchestrator`; `core/schemas.py` dataclasses vs `schemas.py` Pydantic DTOs; `core/diagnostic.py` vs `diagnostic/engine.py`; `core/recommendations.py` vs `recommendations/engine.py`) — do not collapse them into a shared module that drags app deps into core.
+- **Dependency inversion for the LLM.** Evaluators (`RAGEvaluator`, `MetricsEvaluator`, `EvaluationOrchestrator`) take injected LangChain `llm`/`embeddings`; `None` falls back to RAGAS defaults. The concrete Gemini wiring lives only in `cli.py::setup_llm()` — keep provider construction there, not inside evaluator classes. New full-app evaluators subclass `evaluators/base.py::BaseEvaluator`.
+- **Config home.** All app tunables live in `src/rems/config.py` (`Settings`, `REMS_` env prefix, `.env`). The core library instead reads its own `EvaluationConfig` dataclass (`core/schemas.py`) so library users need no `.env`. Add new thresholds/knobs to both only when they must exist in both tiers; check here before hardcoding a value.
+- **Secrets home.** `.env` (gitignored), keys `REMS_GOOGLE_API_KEY`, `REMS_CHATBOT_API_KEY`, `REMS_DATABASE_URL`. No keyring. Never read secrets outside `config.py`.
+
+## Do Not Modify
+
+- `.env` — real secrets (gitignored).
+- `uv.lock` — regenerate only via `uv` commands.
+- `/reports/` (repo-root, gitignored generated PDF/HTML) — distinct from the tracked code module `src/rems/reports/`.
+- `/recommendations.yaml` (repo-root, gitignored generated output) — distinct from `recommendations/` code.
+- `*.db` / `*.sqlite3`, `htmlcov/`, `.coverage`.
+
+## Invariants
+
+Commit style and logging conventions are global (English conventional commits; `structlog` for app-layer logging). Project-specific:
+
+- **CI-green locally** = `uv run ruff check src/` and `uv run mypy src/`. There are no `.github/workflows` yet — these two commands are the gate.
+- **mypy is `strict = true`, scoped to `src/`.** Keep it clean; RAGAS/`datasets` are already suppressed via inline `# type: ignore`.
+- **ruff**: line-length 100, `select = ["E","F","I","N","W","UP"]`. No E501 suppression — wrap long lines.
+- **No test suite exists yet** despite `pytest` being in `[dev]`. If you add tests, mock all external deps (RAGAS/Gemini/DB) exactly as the global test-mocking rule requires; put them under `tests/` mirroring module names.
+
+## Multi-agent Orchestration
+
+Global methodology and report template apply (see `~/.claude/CLAUDE.md`). Project bindings:
+
+- **Tracking-file source of truth:** there is no dedicated `BACKLOG.md`/`TODO.md`/`PLAN.md`. `SESSION_RESUME.md` (its "Next Steps (Potential)" list) is the closest roadmap — read it for intent, do not create a parallel tracker.
+- **Sub-agent → layer map:**
+
+  | Concern | Directory |
+  |---------|-----------|
+  | Core library (import-safe) | `src/rems/core/` |
+  | Full evaluation pipeline | `src/rems/evaluators/`, `src/rems/collector/` |
+  | Diagnostics & recommendations | `src/rems/diagnostic/`, `src/rems/recommendations/` |
+  | Persistence (SQLAlchemy) | `src/rems/models/` |
+  | Reporting (WeasyPrint + Jinja2) | `src/rems/reports/` |
+  | Streamlit UI | `src/rems/web/` |
+  | Config & CLI | `src/rems/config.py`, `src/rems/cli.py` |
+
+## Established Facts (don't re-question)
+
+- **On-demand only, no scheduler.** Weekly scheduling was deliberately removed when the tool was generalized; there is no scheduler module and none should be re-added without discussion.
+- **Generalized from a French regulatory tool** into a domain-agnostic English toolkit — do not reintroduce compliance/regulatory-specific naming or French UI strings.
+- **RAGAS 0.4.x pin**: class-based metric imports and the `user_input`/`response`/`retrieved_contexts` column names (see "RAGAS 0.4.x API" above) are required — the old function/column API breaks.
+- **`GoogleGenerativeAIEmbeddings` uses `models/embedding-001`**, hardcoded in `cli.py::setup_llm()` (the eval LLM model is configurable via `REMS_EVALUATION_MODEL`, the embedding model is not).
+
 ## Key Files
 
 - `test_interactions.json` - Sample interactions for testing
