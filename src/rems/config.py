@@ -41,6 +41,12 @@ class Settings(BaseSettings):
         description="Model to use for LLM-as-judge evaluation",
     )
 
+    # Logging
+    log_level: str = Field(
+        default="INFO",
+        description="Root logging level (DEBUG, INFO, WARNING, ERROR)",
+    )
+
     # Report output
     reports_dir: Path = Field(
         default=Path("./reports"),

@@ -179,6 +179,7 @@ Commit style and logging conventions are global (English conventional commits; `
 - **mypy is `strict = true`, scoped to `src/`.** Keep it clean; RAGAS/`datasets` are already suppressed via inline `# type: ignore`.
 - **ruff**: line-length 100, `select = ["E","F","I","N","W","UP"]`. No E501 suppression — wrap long lines.
 - **No test suite exists yet** despite `pytest` being in `[dev]`. If you add tests, mock all external deps (RAGAS/Gemini/DB) exactly as the global test-mocking rule requires; put them under `tests/` mirroring module names.
+- **Logging** (concrete binding of the global *Logging & observability* practice). `src/rems/logging_config.py::setup_logging(level)` is the single source of truth: console handler (INFO) + rotating file handler (DEBUG → `logs/rems.log`, 10 MB × 5). It routes **structlog through stdlib logging** (structlog `ProcessorFormatter` + `LoggerFactory`), so the rotating file captures both structlog and third-party records — console is human-readable, the file is JSON lines. Idempotent. Wired at both entry points: the Streamlit app (`web/app.py`, top of module) and the CLI (`cli.py`). Level comes from `REMS_LOG_LEVEL` (config). App layers keep using `structlog.get_logger()` as before; **`core/` must not import `logging_config`** (structlog is an app extra — keep core import-safe). `logs/` is gitignored.
 
 ## Multi-agent Orchestration
 

@@ -2,6 +2,12 @@
 
 import streamlit as st
 
+from rems.config import settings
+from rems.logging_config import setup_logging
+
+# Streamlit re-runs this script on every interaction; setup_logging is idempotent.
+setup_logging(settings.log_level)
+
 st.set_page_config(
     page_title="REMS - RAG Evaluation & Monitoring",
     page_icon="📊",

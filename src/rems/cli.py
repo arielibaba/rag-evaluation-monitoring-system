@@ -11,22 +11,13 @@ from rems import __version__
 from rems.collector import APICollector
 from rems.config import settings
 from rems.evaluators import EvaluationOrchestrator
+from rems.logging_config import setup_logging
 from rems.models import init_db
 from rems.recommendations import RecommendationEngine
 from rems.reports import ReportGenerator
 
-# Configure structured logging
-structlog.configure(
-    processors=[
-        structlog.stdlib.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.dev.ConsoleRenderer(),
-    ],
-    wrapper_class=structlog.stdlib.BoundLogger,
-    context_class=dict,
-    logger_factory=structlog.PrintLoggerFactory(),
-    cache_logger_on_first_use=True,
-)
+# Centralised logging (console + rotating file) — single source of truth in logging_config.
+setup_logging(settings.log_level)
 
 logger = structlog.get_logger()
 
