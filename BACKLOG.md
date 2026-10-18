@@ -5,28 +5,7 @@ chatbot performance as an external observer.
 
 ## Done
 
-- **Core library** (`src/rems/core/`) — lightweight, DB-free package importable
-  as `from rems import RAGEvaluator, Interaction`: evaluator, schemas, RAGAS
-  metrics wrapper, diagnostic, recommendations.
-- **Full application layer** — API/file collector, SQLAlchemy models + session,
-  full RAGAS evaluators (retrieval, generation, orchestrator), diagnostic engine,
-  recommendation engine.
-- **CLI** (`src/rems/cli.py`) — `init-db`, `collect`, `evaluate` (file-based and
-  API-based modes), `web`.
-- **Web dashboard** (Streamlit) — Dashboard, History, New Evaluation pages;
-  Plotly gauges and trend charts.
-- **Reports** — PDF/HTML generation (WeasyPrint + Jinja2 template) and YAML
-  recommendations export.
-- **Metrics** — Faithfulness, Answer Relevancy, Context Precision, Hallucination
-  Rate; quality-level classification; configurable diagnostic thresholds via env.
-- **Domain-agnostic generalization** — removed regulatory/compliance specifics,
-  translated code and UI from French to English.
-- **Optional dependency groups** — `pip install rems` (core) vs `rems[app]` (web,
-  DB, reports).
-- **RAGAS 0.4.x compatibility** and structlog config fixes.
-- **Simulation script** (`scripts/simulate_evaluation.py`) — run an evaluation
-  without an LLM.
-- **Documentation** — README, CLAUDE.md, SESSION_RESUME.md.
+→ Closed section, moved verbatim to `BACKLOG-ARCHIVE.md` on 2026-10-19 (find it with `grep`).
 
 ## In progress
 
