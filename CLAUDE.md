@@ -185,7 +185,7 @@ Commit style and logging conventions are global (English conventional commits; `
 
 Global methodology and report template apply (see `~/.claude/CLAUDE.md`). Project bindings:
 
-- **Tracking-file source of truth:** there is no dedicated `BACKLOG.md`/`TODO.md`/`PLAN.md`. `SESSION_RESUME.md` (its "Next Steps (Potential)" list) is the closest roadmap — read it for intent, do not create a parallel tracker.
+- **Tracking-file source of truth:** `BACKLOG.md` at the repo root (open items) and `BACKLOG-ARCHIVE.md` beside it (done work — `grep` it, never read it whole); the single source of truth, never a parallel file. `SESSION_RESUME.md` is a session narrative (read it for intent), not a task ledger.
 - **Sub-agent → layer map:**
 
   | Concern | Directory |
